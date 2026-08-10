@@ -1,0 +1,321 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { StaffSidebar } from '../../components/StaffSidebar';
+import { StaffHeader } from '../../components/StaffHeader';
+import { api } from '../../services/api';
+import { StatusBadge, PriorityBadge, SentimentBadge } from '../../components/Badge';
+import {
+  Inbox,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+  BarChart2,
+  PieChart as PieIcon,
+  ArrowUpRight,
+  Flame,
+  Zap
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip
+} from 'recharts';
+
+export function StaffDashboardPage() {
+  const [complaints, setComplaints] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    new: 0,
+    critical: 0,
+    inProgress: 0,
+    resolved: 0,
+    resolutionRate: 0
+  });
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.getStaffComplaints(),
+      api.getAnalytics()
+    ])
+      .then(([resComp, resAna]) => {
+        if (resComp.success) {
+          setComplaints(resComp.complaints || []);
+          setStats(resComp.stats || {});
+        }
+        if (resAna.success) {
+          setAnalytics(resAna.analytics || {});
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const criticalComplaints = complaints.filter(c => c.priority === 'CRITICAL' && c.status !== 'RESOLVED');
+
+  // Chart Color Palettes
+  const SENTIMENT_COLORS = ['#ef4444', '#94a3b8', '#10b981']; // Negative (red), Neutral (slate), Positive (emerald)
+  const PRIORITY_COLORS = ['#3b82f6', '#f59e0b', '#f97316', '#f43f5e'];
+
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      <StaffSidebar />
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        <StaffHeader
+          title="Analyst Dashboard"
+          subtitle="Real-time complaint intelligence, sentiment analytics, and SLA resolution velocity."
+        />
+
+        <main className="p-6 space-y-6 flex-1">
+          
+          {/* Critical Alerts Banner */}
+          {criticalComplaints.length > 0 && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-rose-900">
+                    {criticalComplaints.length} Critical Complaint{criticalComplaints.length > 1 ? 's' : ''} Require Immediate Analyst Attention
+                  </h3>
+                  <p className="text-xs text-rose-700 mt-0.5">High financial impact or operational glitch reported.</p>
+                </div>
+              </div>
+              <Link
+                to="/staff/complaints?priority=CRITICAL"
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+              >
+                Review Critical Complaints
+              </Link>
+            </div>
+          )}
+
+          {/* KPI Metrics Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Total</span>
+                <Inbox className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
+              <span className="text-2xs text-slate-500 font-medium">All Time Submissions</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">New</span>
+                <Zap className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-2xl font-extrabold text-amber-600">{stats.new}</p>
+              <span className="text-2xs text-slate-500 font-medium">Awaiting Analyst Action</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Critical</span>
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+              </div>
+              <p className="text-2xl font-extrabold text-rose-600">{stats.critical}</p>
+              <span className="text-2xs text-slate-500 font-medium">High Risk Issues</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">In Progress</span>
+                <Clock className="w-4 h-4 text-sky-600" />
+              </div>
+              <p className="text-2xl font-extrabold text-sky-600">{stats.inProgress}</p>
+              <span className="text-2xs text-slate-500 font-medium">Under Investigation</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Resolved</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </div>
+              <p className="text-2xl font-extrabold text-emerald-600">{stats.resolved}</p>
+              <span className="text-2xs text-slate-500 font-medium">Responses Sent</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Rate</span>
+                <TrendingUp className="w-4 h-4 text-indigo-600" />
+              </div>
+              <p className="text-2xl font-extrabold text-indigo-600">{stats.resolutionRate}%</p>
+              <span className="text-2xs text-slate-500 font-medium">Completion SLA</span>
+            </div>
+          </div>
+
+          {/* Visual Intelligence Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Sentiment Analysis Chart */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center">
+                  <PieIcon className="w-4 h-4 text-blue-600 mr-2" />
+                  Sentiment Breakdown
+                </h3>
+                <span className="text-2xs font-semibold text-slate-400">Gemini AI</span>
+              </div>
+              <div className="h-48">
+                {analytics?.sentiment && analytics.sentiment.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={analytics.sentiment}
+                        dataKey="count"
+                        nameKey="sentiment"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        innerRadius={45}
+                        paddingAngle={4}
+                      >
+                        {analytics.sentiment.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-400">No sentiment data</div>
+                )}
+              </div>
+            </div>
+
+            {/* Priority Distribution Chart */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center">
+                  <BarChart2 className="w-4 h-4 text-amber-600 mr-2" />
+                  Priority Distribution
+                </h3>
+                <span className="text-2xs font-semibold text-slate-400">AI Scoring</span>
+              </div>
+              <div className="h-48">
+                {analytics?.priority && analytics.priority.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics.priority}>
+                      <XAxis dataKey="priority" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-400">No priority data</div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Issue Themes Chart */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center">
+                  <Flame className="w-4 h-4 text-rose-600 mr-2" />
+                  Top Customer Themes
+                </h3>
+                <span className="text-2xs font-semibold text-slate-400">Clusters</span>
+              </div>
+              <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                {analytics?.theme && analytics.theme.length > 0 ? (
+                  analytics.theme.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                      <span className="font-semibold text-slate-800 truncate max-w-[180px]">{t.theme}</span>
+                      <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{t.count}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 text-center py-8">No themes extracted</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Recent Complaints Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 custom-shadow overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Recent Customer Complaints</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Click any record to inspect Gemini AI analysis and resolve.</p>
+              </div>
+              <Link
+                to="/staff/complaints"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center"
+              >
+                <span>View Full Inbox</span>
+                <ArrowUpRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-2xs uppercase tracking-wider text-slate-500 font-bold">
+                    <th className="py-3.5 px-6">Complaint ID</th>
+                    <th className="py-3.5 px-4">Customer</th>
+                    <th className="py-3.5 px-4">Category</th>
+                    <th className="py-3.5 px-4">Sentiment</th>
+                    <th className="py-3.5 px-4">Priority</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4">Created</th>
+                    <th className="py-3.5 px-6 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {complaints.slice(0, 8).map(c => (
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-6 font-mono font-bold text-blue-600">
+                        {c.complaintNumber}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        {c.name}
+                        <span className="block text-2xs font-normal text-slate-400">{c.email}</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-700 font-medium">{c.category}</td>
+                      <td className="py-3.5 px-4">
+                        <SentimentBadge sentiment={c.sentiment} score={c.sentimentScore} />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <PriorityBadge priority={c.priority} />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <StatusBadge status={c.status} />
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3.5 px-6 text-right">
+                        <Link
+                          to={`/staff/complaints/${c.id}`}
+                          className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-lg border border-blue-200 transition-colors text-2xs"
+                        >
+                          Review AI
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </main>
+      </div>
+    </div>
+  );
+}

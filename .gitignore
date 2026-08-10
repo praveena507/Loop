@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local Environment Variables (Contains Secret Keys)
+.env
+.env.local
+.env.*.local
+
+# Build Outputs
+dist/
+build/
+.out/
+
+# Database Files & Logs
+*.db
+*.db-journal
+*.log
+
+# System Files
+.DS_Store
+Thumbs.db
