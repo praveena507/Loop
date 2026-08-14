@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StaffSidebar } from '../../components/StaffSidebar';
-import { StaffHeader } from '../../components/StaffHeader';
-import { api } from '../../services/api';
+import { StaffSidebar } from '../components/StaffSidebar';
+import { StaffHeader } from '../components/StaffHeader';
+import { api } from '../../shared/services/api';
 import { BarChart3, PieChart, TrendingUp, Zap, ShieldCheck, Flame, Layers, AlertTriangle, FileCheck } from 'lucide-react';
 import {
   ResponsiveContainer,

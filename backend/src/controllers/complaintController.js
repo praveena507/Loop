@@ -1,5 +1,5 @@
 import { dbRun, dbGet, dbAll, supabaseQuery } from '../db/initDb.js';
-import { sendResolutionEmail } from '../services/emailService.js';
+import { sendResolutionEmail, createEmailVerification } from '../services/emailService.js';
 
 export async function createComplaint(req, res) {
   try {
@@ -69,9 +69,14 @@ export async function createComplaint(req, res) {
     await supabaseQuery.insertComplaint(complaintData);
     await supabaseQuery.updateComplaintStatus(complaintId, 'SUBMITTED');
 
+    // Create verification OTP record
+    const verification = await createEmailVerification(trimmedEmail, name);
+
     return res.status(201).json({
       success: true,
       message: 'Complaint created successfully. Email verification required.',
+      otp: verification.otp,
+      expiresAt: verification.expiresAt,
       complaint: {
         id: complaintId,
         complaintNumber,

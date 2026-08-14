@@ -4,17 +4,18 @@ import { analyzeComplaintWithGemini } from '../services/geminiService.js';
 
 export async function sendVerification(req, res) {
   try {
-    const { email } = req.body;
+    const { email, name, user_name } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, error: 'Email address is required.' });
     }
 
-    const verification = await createEmailVerification(email.trim().toLowerCase());
+    const userName = name || user_name || 'LOOP User';
+    const verification = await createEmailVerification(email.trim().toLowerCase(), userName);
     return res.json({
       success: true,
       message: 'Verification OTP sent to email address.',
       expiresAt: verification.expiresAt,
-      devOtp: verification.otp
+      otp: verification.otp
     });
   } catch (err) {
     return res.status(400).json({ success: false, error: err.message });

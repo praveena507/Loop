@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
-import { api } from '../../services/api';
+import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
+import { api } from '../../shared/services/api';
+import { sendEmailJSVerification } from '../services/emailjsService';
 import { Send, AlertCircle, Sparkles, Building, Mail, User, Tag, Paperclip, Upload, FileText, Check, Image as ImageIcon, X } from 'lucide-react';
 
 export function ComplaintFormPage() {
@@ -74,11 +75,19 @@ export function ComplaintFormPage() {
     try {
       const res = await api.submitComplaint(formData);
       if (res.success) {
+        if (res.otp) {
+          sendEmailJSVerification({
+            to_email: formData.email.trim(),
+            user_name: formData.name.trim(),
+            passcode: res.otp,
+            expiresAt: res.expiresAt
+          });
+        }
         sessionStorage.setItem('loop_pending_complaint', JSON.stringify({
           complaintId: res.complaint.id,
           complaintNumber: res.complaint.complaintNumber,
           email: formData.email.trim(),
-          devOtp: res.devOtp
+          name: formData.name.trim()
         }));
         navigate('/verify-email');
       }

@@ -150,3 +150,59 @@ export async function resetPasswordWithOTP(req, res) {
     return res.status(500).json({ success: false, error: 'Server error during password reset.' });
   }
 }
+
+/**
+ * Register New Staff Analyst
+ */
+export async function registerAnalyst(req, res) {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Full name, email, and password are required.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existingUser = await dbGet('SELECT id FROM staff_users WHERE LOWER(email) = ?', [cleanEmail]);
+
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: 'A staff account with this email address already exists.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const now = new Date().toISOString();
+
+    await dbRun(
+      `INSERT INTO staff_users (id, name, email, passwordHash, role, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, 'ANALYST', 'ACTIVE', ?, ?)`,
+      [userId, name.trim(), cleanEmail, passwordHash, now, now]
+    );
+
+    // Audit log entry
+    await dbRun(
+      `INSERT INTO audit_logs (id, userId, action, entity, entityId, ipAddress, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [`audit_${Date.now()}`, userId, 'ANALYST_REGISTERED', 'staff_users', userId, req.ip || '127.0.0.1', now]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Staff Analyst account registered successfully! You can now log in.',
+      user: {
+        id: userId,
+        name: name.trim(),
+        email: cleanEmail,
+        role: 'ANALYST'
+      }
+    });
+
+  } catch (err) {
+    console.error('Analyst registration error:', err);
+    return res.status(500).json({ success: false, error: 'Server error during analyst registration.' });
+  }
+}

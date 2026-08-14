@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StaffSidebar } from '../../components/StaffSidebar';
-import { StaffHeader } from '../../components/StaffHeader';
-import { api } from '../../services/api';
+import { StaffSidebar } from '../components/StaffSidebar';
+import { StaffHeader } from '../components/StaffHeader';
+import { api } from '../../shared/services/api';
 import { Users, UserPlus, Shield, Trash2, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export function UserManagementPage() {

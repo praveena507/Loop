@@ -1,6 +1,6 @@
 import React from 'react';
-import { StaffSidebar } from '../../components/StaffSidebar';
-import { StaffHeader } from '../../components/StaffHeader';
+import { StaffSidebar } from '../components/StaffSidebar';
+import { StaffHeader } from '../components/StaffHeader';
 import { FileSpreadsheet, Download, CheckCircle2 } from 'lucide-react';
 
 export function StaffReportsPage() {

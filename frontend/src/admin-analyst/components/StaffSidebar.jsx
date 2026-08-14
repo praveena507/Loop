@@ -13,7 +13,7 @@ import {
   LogOut,
   Cpu
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../shared/context/AuthContext';
 
 export function StaffSidebar() {
   const { user, isAdmin, logout } = useAuth();
@@ -105,14 +105,19 @@ export function StaffSidebar() {
       </div>
 
       {/* User Session Footer */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/50">
+      <div className="p-4 border-t border-slate-800 bg-slate-950/50 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
               {user?.name?.charAt(0) || 'S'}
             </div>
             <div className="truncate">
-              <p className="text-xs font-semibold text-white truncate">{user?.name || 'Staff User'}</p>
+              <div className="flex items-center space-x-1.5">
+                <p className="text-xs font-semibold text-white truncate">{user?.name || 'Staff User'}</p>
+                <span className={`text-3xs px-1.5 py-0.2 font-extrabold uppercase rounded ${isAdmin ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}`}>
+                  {user?.role || 'ANALYST'}
+                </span>
+              </div>
               <p className="text-2xs text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
@@ -124,6 +129,9 @@ export function StaffSidebar() {
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+        <NavLink to="/" className="flex items-center justify-center text-xs text-slate-400 hover:text-blue-400 py-1.5 px-2 rounded-md hover:bg-slate-800/60 transition-colors border border-slate-800/80">
+          ← Back to Customer Portal
+        </NavLink>
       </div>
     </aside>
   );

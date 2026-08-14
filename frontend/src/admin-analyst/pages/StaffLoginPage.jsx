@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { api } from '../../services/api';
+import { useAuth } from '../../shared/context/AuthContext';
+import { api } from '../../shared/services/api';
 import { Cpu, Lock, Mail, Eye, EyeOff, AlertCircle, Shield, KeyRound, CheckCircle2, X, Sparkles, UserCheck, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export function StaffLoginPage() {
@@ -30,6 +30,15 @@ export function StaffLoginPage() {
   const [forgotError, setForgotError] = useState(null);
   const [forgotSuccess, setForgotSuccess] = useState(null);
 
+  // Register Analyst Modal State
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState(null);
+  const [regSuccess, setRegSuccess] = useState(null);
+
   // Quick Switch Roles
   const handleSwitchTab = (role) => {
     setActiveTab(role);
@@ -40,6 +49,44 @@ export function StaffLoginPage() {
     } else {
       setEmail('admin@loop.com');
       setPassword('Admin@12345');
+    }
+  };
+
+  const handleRegisterAnalystSubmit = async (e) => {
+    e.preventDefault();
+    setRegError(null);
+    setRegSuccess(null);
+
+    if (!regName.trim() || !regEmail.trim() || !regPassword) {
+      setRegError('Please fill in all required fields.');
+      return;
+    }
+
+    setRegLoading(true);
+    try {
+      const res = await api.staffRegisterAnalyst({
+        name: regName.trim(),
+        email: regEmail.trim(),
+        password: regPassword
+      });
+
+      if (res.success) {
+        setRegSuccess('Analyst account registered successfully! Auto-selecting account...');
+        setTimeout(() => {
+          setActiveTab('ANALYST');
+          setEmail(regEmail.trim());
+          setPassword(regPassword);
+          setShowRegisterModal(false);
+          setRegName('');
+          setRegEmail('');
+          setRegPassword('');
+          setRegSuccess(null);
+        }, 1500);
+      }
+    } catch (err) {
+      setRegError(err.message || 'Failed to register analyst account.');
+    } finally {
+      setRegLoading(false);
     }
   };
 
@@ -291,6 +338,22 @@ export function StaffLoginPage() {
             </button>
           </form>
 
+          {/* Registration Option */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setRegError(null);
+                setRegSuccess(null);
+                setShowRegisterModal(true);
+              }}
+              className="text-xs font-semibold text-blue-400 hover:underline inline-flex items-center space-x-1"
+            >
+              <UserCheck className="w-3.5 h-3.5 mr-1" />
+              <span>Need a new Analyst account? Register Analyst</span>
+            </button>
+          </div>
+
           {/* Quick Credential Pre-fill Cards */}
           <div className="mt-8 pt-6 border-t border-slate-700/80 space-y-3">
             <p className="text-xs font-bold text-slate-300">Quick Test Credentials (Seeded):</p>
@@ -497,6 +560,104 @@ export function StaffLoginPage() {
                 </div>
               </form>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {/* Analyst Registration Modal */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 text-white shadow-2xl">
+            
+            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+              <div className="flex items-center space-x-2">
+                <UserCheck className="w-5 h-5 text-blue-400" />
+                <h3 className="text-base font-bold">Register New Staff Analyst</h3>
+              </div>
+              <button
+                onClick={() => setShowRegisterModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {regError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{regError}</span>
+              </div>
+            )}
+
+            {regSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{regSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterAnalystSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sarah Jenkins"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Staff Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. s.jenkins@loop.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="At least 6 characters"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={regLoading}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 flex items-center space-x-1"
+                >
+                  <UserCheck className="w-3.5 h-3.5 mr-1" />
+                  <span>{regLoading ? 'Registering...' : 'Register Analyst Account'}</span>
+                </button>
+              </div>
+            </form>
 
           </div>
         </div>

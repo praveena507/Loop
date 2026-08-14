@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
-import { api } from '../../services/api';
+import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
+import { api } from '../../shared/services/api';
+import { sendEmailJSVerification } from '../services/emailjsService';
 import { KeyRound, RefreshCw, CheckCircle2, AlertCircle, Sparkles, Mail } from 'lucide-react';
 
 export function EmailVerifyPage() {
@@ -12,7 +13,7 @@ export function EmailVerifyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resendMsg, setResendMsg] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 mins
+  const [timeLeft, setTimeLeft] = useState(150); // 2.5 mins (150 seconds)
 
   useEffect(() => {
     const data = sessionStorage.getItem('loop_pending_complaint');
@@ -60,11 +61,16 @@ export function EmailVerifyPage() {
     setResendMsg(null);
     try {
       const res = await api.resendOTP(sessionData.email);
-      setResendMsg('A new verification code has been dispatched.');
-      setTimeLeft(600);
-      if (res.devOtp) {
-        setSessionData(prev => ({ ...prev, devOtp: res.devOtp }));
+      if (res.otp) {
+        sendEmailJSVerification({
+          to_email: sessionData.email,
+          user_name: sessionData?.name || 'LOOP User',
+          passcode: res.otp,
+          expiresAt: res.expiresAt
+        });
       }
+      setResendMsg('A new verification code has been dispatched to your email address.');
+      setTimeLeft(150);
     } catch (err) {
       setError(err.message || 'Failed to resend verification code.');
     }
@@ -95,19 +101,6 @@ export function EmailVerifyPage() {
               Enter the 6-digit verification code sent to <br />
               <span className="font-semibold text-slate-800">{sessionData.email}</span>
             </p>
-
-            {/* Developer Testing Banner */}
-            {sessionData.devOtp && (
-              <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between">
-                <span className="flex items-center">
-                  <Sparkles className="w-4 h-4 mr-1.5 text-amber-600" />
-                  Test Verification Code:
-                </span>
-                <span className="font-mono text-sm tracking-widest bg-amber-100 px-2 py-0.5 rounded text-amber-900">
-                  {sessionData.devOtp}
-                </span>
-              </div>
-            )}
 
             {error && (
               <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2">

@@ -45,6 +45,7 @@ export const api = {
 
   // Staff Auth & Password Reset
   staffLogin: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+  staffRegisterAnalyst: (userData) => request('/auth/register-analyst', { method: 'POST', body: JSON.stringify(userData) }),
   staffForgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
   staffResetPassword: (payload) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify(payload) }),
 

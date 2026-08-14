@@ -1,25 +1,25 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from './shared/context/AuthContext';
 
 // User Portal Pages
-import { LandingPage } from './pages/user/LandingPage';
-import { ComplaintFormPage } from './pages/user/ComplaintFormPage';
-import { EmailVerifyPage } from './pages/user/EmailVerifyPage';
-import { ComplaintSuccessPage } from './pages/user/ComplaintSuccessPage';
-import { TrackComplaintPage } from './pages/user/TrackComplaintPage';
+import { LandingPage } from './user/pages/LandingPage';
+import { ComplaintFormPage } from './user/pages/ComplaintFormPage';
+import { EmailVerifyPage } from './user/pages/EmailVerifyPage';
+import { ComplaintSuccessPage } from './user/pages/ComplaintSuccessPage';
+import { TrackComplaintPage } from './user/pages/TrackComplaintPage';
 
 // Staff Portal Pages
-import { StaffLoginPage } from './pages/staff/StaffLoginPage';
-import { StaffDashboardPage } from './pages/staff/StaffDashboardPage';
-import { ComplaintInboxPage } from './pages/staff/ComplaintInboxPage';
-import { ComplaintDetailPage } from './pages/staff/ComplaintDetailPage';
-import { StaffAnalyticsPage } from './pages/staff/StaffAnalyticsPage';
-import { StaffReportsPage, StaffNotificationsPage, StaffProfilePage } from './pages/staff/StaffReportsPage';
+import { StaffLoginPage } from './admin-analyst/pages/StaffLoginPage';
+import { StaffDashboardPage } from './admin-analyst/pages/StaffDashboardPage';
+import { ComplaintInboxPage } from './admin-analyst/pages/ComplaintInboxPage';
+import { ComplaintDetailPage } from './admin-analyst/pages/ComplaintDetailPage';
+import { StaffAnalyticsPage } from './admin-analyst/pages/StaffAnalyticsPage';
+import { StaffReportsPage, StaffNotificationsPage, StaffProfilePage } from './admin-analyst/pages/StaffReportsPage';
 
 // Admin Pages
-import { UserManagementPage } from './pages/admin/UserManagementPage';
-import { SettingsPage, AuditLogsPage } from './pages/admin/SettingsPage';
+import { UserManagementPage } from './admin-analyst/pages/UserManagementPage';
+import { SettingsPage, AuditLogsPage } from './admin-analyst/pages/SettingsPage';
 
 // Route Guards
 function StaffProtectedRoute({ children }) {

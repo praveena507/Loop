@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { StaffSidebar } from '../../components/StaffSidebar';
-import { StaffHeader } from '../../components/StaffHeader';
-import { api } from '../../services/api';
-import { StatusBadge, PriorityBadge, SentimentBadge } from '../../components/Badge';
+import { StaffSidebar } from '../components/StaffSidebar';
+import { StaffHeader } from '../components/StaffHeader';
+import { api } from '../../shared/services/api';
+import { StatusBadge, PriorityBadge, SentimentBadge } from '../../shared/components/Badge';
 import { Search, Filter, RefreshCw, ArrowUpDown, ChevronRight } from 'lucide-react';
 
 export function ComplaintInboxPage() {

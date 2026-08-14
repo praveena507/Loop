@@ -1,27 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
-import { api } from '../../services/api';
-import { Search, AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, Check, ChevronRight } from 'lucide-react';
-import { StatusBadge } from '../../components/Badge';
+import { useSearchParams, useParams } from 'react-router-dom';
+import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
+import { api } from '../../shared/services/api';
+import { Search, AlertCircle, CheckCircle2, Clock, ShieldCheck, Check, ArrowRight } from 'lucide-react';
+import { StatusBadge } from '../../shared/components/Badge';
 
 export function TrackComplaintPage() {
   const [searchParams] = useSearchParams();
-  const [complaintNumber, setComplaintNumber] = useState(searchParams.get('id') || '');
-  const [email, setEmail] = useState(searchParams.get('email') || '');
+  const routeParams = useParams();
+
+  const urlId = searchParams.get('id') || routeParams?.id || '';
+  const urlEmail = searchParams.get('email') || '';
+
+  const [complaintNumber, setComplaintNumber] = useState(urlId);
+  const [email, setEmail] = useState(urlEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [trackingResult, setTrackingResult] = useState(null);
 
   // Auto query if params provided in URL
   useEffect(() => {
-    const qId = searchParams.get('id');
-    const qEmail = searchParams.get('email');
-    if (qId && qEmail) {
-      fetchTracking(qId, qEmail);
+    if (urlId && urlEmail) {
+      fetchTracking(urlId, urlEmail);
     }
-  }, [searchParams]);
+  }, [urlId, urlEmail]);
 
   const fetchTracking = async (idVal, emailVal) => {
     setLoading(true);
@@ -30,6 +33,9 @@ export function TrackComplaintPage() {
       const res = await api.trackComplaint(idVal, emailVal);
       if (res.success) {
         setTrackingResult(res.complaint);
+      } else {
+        setError(res.error || 'No matching complaint found. Please check Complaint ID and Email.');
+        setTrackingResult(null);
       }
     } catch (err) {
       setError(err.message || 'No matching complaint found. Please check Complaint ID and Email.');
@@ -47,6 +53,35 @@ export function TrackComplaintPage() {
     }
     fetchTracking(complaintNumber.trim(), email.trim());
   };
+
+  // Helper to build timeline steps safely
+  const getTimelineSteps = (complaint) => {
+    if (!complaint) return [];
+
+    const statusOrder = {
+      'SUBMITTED': 1,
+      'VERIFIED': 2,
+      'AI_ANALYZING': 3,
+      'AI_ANALYZED': 3,
+      'IN_PROGRESS': 4,
+      'ACTION_TAKEN': 4,
+      'RESOLVED': 5,
+      'REJECTED': 5
+    };
+
+    const currentLevel = statusOrder[complaint.status] || 1;
+
+    return [
+      { key: 'SUBMITTED', title: 'Complaint Submitted & Received', completed: currentLevel >= 1 },
+      { key: 'VERIFIED', title: 'Email Verified (2.5-min OTP)', completed: currentLevel >= 2 },
+      { key: 'AI_ANALYSIS', title: 'Gemini AI Sentiment & Root Cause Analysis', completed: currentLevel >= 3 },
+      { key: 'IN_PROGRESS', title: 'Support Analyst Workbench Review', completed: currentLevel >= 4 },
+      { key: 'RESOLVED', title: complaint.status === 'REJECTED' ? 'Complaint Closed' : 'Resolution Issued & Delivered', completed: currentLevel >= 5 }
+    ];
+  };
+
+  const finalResponse = trackingResult ? (trackingResult.response || trackingResult.finalResponse) : null;
+  const timelineSteps = trackingResult ? (trackingResult.timeline || getTimelineSteps(trackingResult)) : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -105,7 +140,7 @@ export function TrackComplaintPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <Search className="w-4 h-4" />
                   <span>{loading ? 'Searching...' : 'Track'}</span>
@@ -141,7 +176,7 @@ export function TrackComplaintPage() {
                   </div>
                   <div>
                     <span className="text-slate-400 font-medium block">Submitted Date</span>
-                    <span className="font-bold text-slate-800">{new Date(trackingResult.createdAt).toLocaleDateString()}</span>
+                    <span className="font-bold text-slate-800">{trackingResult.createdAt ? new Date(trackingResult.createdAt).toLocaleDateString() : 'N/A'}</span>
                   </div>
                 </div>
 
@@ -159,7 +194,7 @@ export function TrackComplaintPage() {
                 </h3>
 
                 <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                  {trackingResult.timeline.map((step, idx) => (
+                  {timelineSteps.map((step) => (
                     <div key={step.key} className="relative flex items-center space-x-4">
                       {/* Step Dot */}
                       <div
@@ -188,23 +223,25 @@ export function TrackComplaintPage() {
               </div>
 
               {/* Final Official Customer Response (If Resolved) */}
-              {trackingResult.finalResponse && (
+              {finalResponse && (
                 <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <ShieldCheck className="w-6 h-6 text-emerald-600" />
                       <div>
                         <h4 className="text-base font-bold text-slate-900">Official Resolution Response</h4>
-                        <p className="text-xs text-emerald-800 font-medium">Issued by: {trackingResult.finalResponse.senderLabel}</p>
+                        <p className="text-xs text-emerald-800 font-medium">Issued by: {finalResponse.senderLabel || 'LOOP Support Team'}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-500">
-                      {new Date(trackingResult.finalResponse.resolutionDate).toLocaleDateString()}
-                    </span>
+                    {finalResponse.sentAt && (
+                      <span className="text-xs font-bold text-slate-500">
+                        {new Date(finalResponse.sentAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-4 bg-white/90 rounded-xl border border-emerald-100 text-sm text-slate-800 leading-relaxed font-medium">
-                    {trackingResult.finalResponse.responseText}
+                    {finalResponse.responseText}
                   </div>
                 </div>
               )}
