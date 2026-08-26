@@ -15,7 +15,7 @@ export function LandingPage() {
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-xs font-bold mb-6 border border-blue-200">
               <Cpu className="w-3.5 h-3.5" />
-              <span>Powered by Gemini AI Intelligence Engine</span>
+              <span>Automated Priority & Sentiment Engine</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -52,10 +52,10 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">How LOOP Resolution Works</h2>
-            <p className="mt-3 text-slate-600 text-sm">Four simple steps to get your issue addressed and resolved.</p>
+            <p className="mt-3 text-slate-600 text-sm">Three simple steps to get your issue addressed and resolved.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 card-hover">
               <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg mb-4">
                 1
@@ -77,18 +77,8 @@ export function LandingPage() {
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 card-hover">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg mb-4">
-                3
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Gemini AI Analysis</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Our backend Gemini AI evaluates sentiment, extracts key themes, and routes to appropriate support teams.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 card-hover">
               <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg mb-4">
-                4
+                3
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Track & Receive</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
@@ -121,7 +111,7 @@ export function LandingPage() {
                 </li>
                 <li className="flex items-center text-sm font-semibold text-slate-800">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2.5 shrink-0" />
-                  Automated Gemini AI categorization guarantees fair priority handling
+                  Automated sentiment & priority categorization guarantees fair handling
                 </li>
                 <li className="flex items-center text-sm font-semibold text-slate-800">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2.5 shrink-0" />
@@ -183,7 +173,7 @@ export function LandingPage() {
             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80">
               <h3 className="text-base font-bold text-slate-900 mb-2">How is complaint priority determined?</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Priority is automatically determined by our backend Gemini AI model, which analyzes text urgency, transaction impact, and risk factors to assign Low, Medium, High, or Critical ratings.
+                Priority is automatically determined by our backend intelligence model, which analyzes text urgency, transaction impact, and risk factors to assign Low, Medium, High, or Critical ratings.
               </p>
             </div>
           </div>

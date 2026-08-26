@@ -74,7 +74,7 @@ export function TrackComplaintPage() {
     return [
       { key: 'SUBMITTED', title: 'Complaint Submitted & Received', completed: currentLevel >= 1 },
       { key: 'VERIFIED', title: 'Email Verified (2.5-min OTP)', completed: currentLevel >= 2 },
-      { key: 'AI_ANALYSIS', title: 'Gemini AI Sentiment & Root Cause Analysis', completed: currentLevel >= 3 },
+      { key: 'AI_ANALYSIS', title: 'Automated Sentiment & Priority Analysis', completed: currentLevel >= 3 },
       { key: 'IN_PROGRESS', title: 'Support Analyst Workbench Review', completed: currentLevel >= 4 },
       { key: 'RESOLVED', title: complaint.status === 'REJECTED' ? 'Complaint Closed' : 'Resolution Issued & Delivered', completed: currentLevel >= 5 }
     ];

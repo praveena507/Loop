@@ -24,6 +24,15 @@ async function request(endpoint, options = {}) {
     const res = await fetch(`${API_BASE}${endpoint}`, config);
     const data = await res.json();
 
+    if (res.status === 401) {
+      localStorage.removeItem('loop_staff_token');
+      localStorage.removeItem('loop_staff_user');
+      if (window.location.pathname.startsWith('/staff')) {
+        window.location.href = '/office';
+      }
+      throw new Error(data.error || 'Session expired. Please log in again.');
+    }
+
     if (!res.ok) {
       throw new Error(data.error || 'An error occurred while communicating with the server.');
     }
@@ -70,6 +79,7 @@ export const api = {
   createAdminUser: (userData) => request('/admin/users', { method: 'POST', body: JSON.stringify(userData) }),
   updateAdminUser: (id, userData) => request(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(userData) }),
   deleteAdminUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
+  assignComplaint: (id, analystId) => request(`/admin/complaints/${id}/assign`, { method: 'POST', body: JSON.stringify({ analystId }) }),
   getAuditLogs: () => request('/admin/audit-logs'),
   getAdminSettings: () => request('/admin/settings')
 };

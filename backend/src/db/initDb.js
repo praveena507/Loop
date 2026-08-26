@@ -184,10 +184,23 @@ export async function initDatabase() {
             proofMatch TEXT,
             rootCause TEXT,
             sectionName TEXT,
+            confidence TEXT,
+            severity TEXT,
+            urgency TEXT,
+            impact TEXT,
+            affectedScope TEXT,
+            priorityReason TEXT,
+            keyFactors TEXT,
             createdAt TEXT NOT NULL,
             updatedAt TEXT NOT NULL
           );
         `);
+
+        // Migration safety for missing ai_analysis columns
+        const aiCols = ['confidence', 'severity', 'urgency', 'impact', 'affectedScope', 'priorityReason', 'keyFactors'];
+        for (const col of aiCols) {
+          db.run(`ALTER TABLE ai_analysis ADD COLUMN ${col} TEXT`, () => {});
+        }
 
         // 5. COMPLAINT_STATUS_HISTORY
         db.run(`

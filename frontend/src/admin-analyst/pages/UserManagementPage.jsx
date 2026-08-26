@@ -111,49 +111,68 @@ export function UserManagementPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-2xs uppercase tracking-wider text-slate-500 font-bold">
-                    <th className="py-3.5 px-6">Staff Name</th>
-                    <th className="py-3.5 px-4">Email Address</th>
+                    <th className="py-3.5 px-6">Staff Member</th>
                     <th className="py-3.5 px-4">Role</th>
+                    <th className="py-3.5 px-4">Active Cases</th>
+                    <th className="py-3.5 px-4">High Priority</th>
+                    <th className="py-3.5 px-4">Workload Capacity</th>
                     <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Created Date</th>
+                    <th className="py-3.5 px-4">Last Activity</th>
                     <th className="py-3.5 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50">
-                      <td className="py-3.5 px-6 font-bold text-slate-900">{u.name}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{u.email}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-bold border ${
-                          u.role === 'ADMIN' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}>
-                          <Shield className="w-3 h-3 mr-1" />
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => handleToggleStatus(u)}
-                          className={`px-2.5 py-0.5 rounded-full text-2xs font-bold border transition-colors ${
-                            u.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600 border-gray-300'
-                          }`}
-                        >
-                          {u.status}
-                        </button>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td className="py-3.5 px-6 text-right">
-                        <button
-                          onClick={() => handleDeleteUser(u.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {users.map(u => {
+                    const capacityPct = u.workloadPercentage || Math.min(100, Math.round(((u.pendingCount || 0) / 15) * 100));
+
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50">
+                        <td className="py-3.5 px-6 font-bold text-slate-900">
+                          {u.name}
+                          <span className="block text-2xs font-normal text-slate-400">{u.email}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-bold border ${
+                            u.role === 'ADMIN' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            <Shield className="w-3 h-3 mr-1" />
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-amber-600">{u.pendingCount || 0}</td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-rose-600">{u.highPriorityCount || 0}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-1 rounded-md text-2xs font-extrabold border ${
+                            capacityPct > 75 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}>
+                            {capacityPct}% Capacity
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <button
+                            onClick={() => handleToggleStatus(u)}
+                            className={`px-2.5 py-0.5 rounded-full text-2xs font-bold border transition-colors cursor-pointer ${
+                              u.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600 border-gray-300'
+                            }`}
+                          >
+                            {u.status}
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-500 font-medium">
+                          {u.lastActivity ? new Date(u.lastActivity).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="py-3.5 px-6 text-right">
+                          <button
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

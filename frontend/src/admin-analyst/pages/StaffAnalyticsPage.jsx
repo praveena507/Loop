@@ -53,7 +53,7 @@ export function StaffAnalyticsPage() {
                 <p className="text-xs text-slate-500 mt-0.5">Identifies which business sections have the highest volume of customer problems.</p>
               </div>
               <span className="text-2xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                Gemini Category Classifier
+                Automated Category Classifier
               </span>
             </div>
 
@@ -83,7 +83,7 @@ export function StaffAnalyticsPage() {
             <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow">
               <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
                 <Flame className="w-4 h-4 text-rose-600 mr-2" />
-                AI Operational Root Cause Analysis
+                Operational Root Cause Analysis
               </h3>
               <div className="h-64">
                 {analytics?.rootCauses && analytics.rootCauses.length > 0 ? (
@@ -107,7 +107,7 @@ export function StaffAnalyticsPage() {
                 <FileCheck className="w-4 h-4 text-emerald-600 mr-2" />
                 Document Proof Attachment Analytics
               </h3>
-              <p className="text-xs text-slate-500">Proportion of complaints with attached receipts, photo proofs, or screenshots verified by Gemini AI OCR.</p>
+              <p className="text-xs text-slate-500">Proportion of complaints with attached receipts, photo proofs, or screenshots verified by Automated Document OCR.</p>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
@@ -115,7 +115,7 @@ export function StaffAnalyticsPage() {
                   <span className="text-2xl font-extrabold text-emerald-600 mt-1 block">
                     {analytics?.proofStats?.find(p => p.attachmentAnalyzed === 1)?.count || 0}
                   </span>
-                  <span className="text-2xs text-emerald-700 font-medium">Processed via Gemini OCR</span>
+                  <span className="text-2xs text-emerald-700 font-medium">Processed via Automated OCR</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">

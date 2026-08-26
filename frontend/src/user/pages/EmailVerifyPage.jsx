@@ -146,7 +146,7 @@ export function EmailVerifyPage() {
                 disabled={loading || otp.length < 6}
                 className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all disabled:opacity-50"
               >
-                {loading ? 'Verifying Code & Running Gemini AI...' : 'Verify Email'}
+                {loading ? 'Verifying Code & Analyzing Complaint...' : 'Verify Email'}
               </button>
             </form>
 

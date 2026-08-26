@@ -157,17 +157,53 @@ export async function trackComplaint(req, res) {
 
 export async function getStaffComplaints(req, res) {
   try {
-    const { status, category, priority, search } = req.query;
+    const { status, category, priority, search, assignedToMe, unassignedOnly } = req.query;
+    const user = req.user;
 
     let sql = `
       SELECT c.*, 
              a.sentiment, a.sentimentScore, a.category as aiCategory, a.theme, 
-             a.priority, a.priorityScore, a.summary as aiSummary, a.attachmentSummary, a.proofMatch, a.rootCause, a.sectionName
+             a.priority, a.priorityScore, a.confidence, a.severity, a.urgency, a.impact, a.affectedScope, a.priorityReason, a.keyFactors,
+             a.summary as aiSummary, a.attachmentSummary, a.proofMatch, a.rootCause, a.sectionName,
+             (
+               SELECT ca.analystId FROM complaint_actions ca 
+               WHERE ca.complaintId = c.id AND ca.analystId IS NOT NULL 
+               ORDER BY ca.createdAt DESC LIMIT 1
+             ) as assignedAnalystId,
+             (
+               SELECT su.name FROM complaint_actions ca 
+               JOIN staff_users su ON ca.analystId = su.id 
+               WHERE ca.complaintId = c.id AND ca.analystId IS NOT NULL 
+               ORDER BY ca.createdAt DESC LIMIT 1
+             ) as assignedAnalystName
       FROM complaints c
       LEFT JOIN ai_analysis a ON c.id = a.complaintId
       WHERE 1=1
     `;
     const params = [];
+
+    // STRICT ROLE-BASED ACCESS CONTROL:
+    // Analysts can strictly ONLY see complaints assigned to their analyst account (matched by ID or Email)
+    if (user && user.role === 'ANALYST') {
+      sql += ` AND c.id IN (
+        SELECT ca1.complaintId FROM complaint_actions ca1
+        JOIN staff_users su ON (ca1.analystId = su.id OR ca1.analystId = su.email)
+        WHERE (su.id = ? OR LOWER(su.email) = LOWER(?))
+      )`;
+      params.push(user.id, user.email);
+    } else if (user && user.role === 'ADMIN') {
+      if (assignedToMe === 'true') {
+        sql += ` AND c.id IN (
+          SELECT ca1.complaintId FROM complaint_actions ca1
+          WHERE (ca1.analystId = ? OR ca1.analystId IN (SELECT id FROM staff_users WHERE LOWER(email) = LOWER(?)))
+        )`;
+        params.push(user.id, user.email);
+      } else if (unassignedOnly === 'true') {
+        sql += ` AND c.id NOT IN (
+          SELECT complaintId FROM complaint_actions WHERE analystId IS NOT NULL
+        )`;
+      }
+    }
 
     if (status) {
       sql += ` AND c.status = ?`;
@@ -204,10 +240,31 @@ export async function getStaffComplaints(req, res) {
 export async function getStaffComplaintById(req, res) {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     const complaint = await dbGet('SELECT * FROM complaints WHERE id = ? OR complaintNumber = ?', [id, id]);
     if (!complaint) {
       return res.status(404).json({ success: false, error: 'Complaint not found.' });
+    }
+
+    // STRICT BACKEND AUTHORIZATION:
+    // Check latest assigned analyst
+    const assignedRow = await dbGet(
+      `SELECT ca.analystId, su.name as analystName
+       FROM complaint_actions ca
+       LEFT JOIN staff_users su ON ca.analystId = su.id
+       WHERE ca.complaintId = ? AND ca.analystId IS NOT NULL
+       ORDER BY ca.createdAt DESC LIMIT 1`,
+      [complaint.id]
+    );
+
+    if (user && user.role === 'ANALYST') {
+      if (!assignedRow || assignedRow.analystId !== user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden: Access denied. This complaint is not assigned to your analyst account.'
+        });
+      }
     }
 
     const aiAnalysis = await dbGet('SELECT * FROM ai_analysis WHERE complaintId = ?', [complaint.id]);
@@ -223,7 +280,11 @@ export async function getStaffComplaintById(req, res) {
 
     return res.json({
       success: true,
-      complaint,
+      complaint: {
+        ...complaint,
+        assignedAnalystId: assignedRow ? assignedRow.analystId : null,
+        assignedAnalystName: assignedRow ? assignedRow.analystName : null
+      },
       aiAnalysis,
       actions,
       response

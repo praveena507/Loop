@@ -108,7 +108,7 @@ export function ComplaintFormPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Submit Your Complaint</h1>
             <p className="mt-2 text-sm text-slate-600">
-              Attach proof documents or receipts below. LOOP Gemini AI will analyze your evidence and determine priority automatically.
+              Attach proof documents or receipts below. Our intelligence system will analyze your evidence and determine priority automatically.
             </p>
           </div>
 
@@ -237,7 +237,7 @@ export function ComplaintFormPage() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center justify-between">
                   <span>Attach Proof Document / Receipt / Screenshot</span>
-                  <span className="text-2xs text-blue-600 font-semibold">Gemini AI Document Analysis</span>
+                  <span className="text-2xs text-blue-600 font-semibold">Automated Document Analysis</span>
                 </label>
 
                 {!attachmentPreview ? (
@@ -269,7 +269,7 @@ export function ComplaintFormPage() {
                       <div className="truncate">
                         <p className="text-xs font-bold text-slate-800 truncate">{attachmentFile?.name || 'Attached Document Proof'}</p>
                         <span className="text-2xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                          Proof Ready for AI OCR Analysis ✓
+                          Proof Ready for Automated Analysis ✓
                         </span>
                       </div>
                     </div>
@@ -304,7 +304,7 @@ export function ComplaintFormPage() {
               {/* AI Priority & Proof Note */}
               <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 flex items-center space-x-2.5 text-blue-700 text-xs font-medium">
                 <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>Gemini AI automatically inspects attached document proof, calculates section impact, and assigns priority.</span>
+                <span>Our system automatically inspects attached document proof, calculates section impact, and assigns priority.</span>
               </div>
 
               {/* Submit Button */}

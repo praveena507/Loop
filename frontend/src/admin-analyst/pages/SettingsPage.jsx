@@ -75,7 +75,7 @@ export function SettingsPage() {
     <div className="flex min-h-screen bg-slate-50">
       <StaffSidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <StaffHeader title="Workspace Settings" subtitle="System operational parameters, SLA targets, and Gemini AI configuration." />
+        <StaffHeader title="Workspace Settings" subtitle="System operational parameters, SLA targets, and AI intelligence configuration." />
         <main className="p-6 flex-1 space-y-6 max-w-xl">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow space-y-4 text-xs">
             <h3 className="text-sm font-bold text-slate-900 flex items-center">
@@ -84,8 +84,8 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-3 pt-2">
               <div>
-                <span className="text-slate-400 font-bold block">Active Gemini Model:</span>
-                <span className="text-slate-800 font-mono font-bold">{settings?.aiModel || 'Gemini 2.5 Flash'}</span>
+                <span className="text-slate-400 font-bold block">Active Intelligence Engine:</span>
+                <span className="text-slate-800 font-mono font-bold">High-Performance Intelligence Engine</span>
               </div>
               <div>
                 <span className="text-slate-400 font-bold block">Resolution SLA Target:</span>

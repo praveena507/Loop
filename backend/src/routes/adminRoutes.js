@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateUser, deleteUser, getSettings, getAuditLogs } from '../controllers/adminController.js';
+import { getUsers, createUser, updateUser, deleteUser, getSettings, getAuditLogs, assignComplaint } from '../controllers/adminController.js';
 import { authenticateStaff, requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -11,6 +11,7 @@ router.get('/users', getUsers);
 router.post('/users', createUser);
 router.patch('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
+router.post('/complaints/:id/assign', assignComplaint);
 router.get('/settings', getSettings);
 router.get('/audit-logs', getAuditLogs);
 

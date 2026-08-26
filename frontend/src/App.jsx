@@ -54,7 +54,10 @@ export default function App() {
           <Route path="/track" element={<TrackComplaintPage />} />
           <Route path="/complaint/:id" element={<TrackComplaintPage />} />
 
-          {/* PORTAL 2: STAFF LOGIN */}
+          {/* PORTAL 2: SEPARATE OFFICE & STAFF LOGIN ROUTES */}
+          <Route path="/office" element={<StaffLoginPage />} />
+          <Route path="/office/login" element={<StaffLoginPage />} />
+          <Route path="/admin/login" element={<StaffLoginPage />} />
           <Route path="/staff/login" element={<StaffLoginPage />} />
 
           {/* PORTAL 2: STAFF PROTECTED ROUTES */}

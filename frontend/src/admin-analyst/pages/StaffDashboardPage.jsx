@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { StaffSidebar } from '../components/StaffSidebar';
 import { StaffHeader } from '../components/StaffHeader';
 import { api } from '../../shared/services/api';
+import { useAuth } from '../../shared/context/AuthContext';
 import { StatusBadge, PriorityBadge, SentimentBadge } from '../../shared/components/Badge';
 import {
   Inbox,
@@ -14,7 +15,8 @@ import {
   PieChart as PieIcon,
   ArrowUpRight,
   Flame,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -31,6 +33,7 @@ import {
 } from 'recharts';
 
 export function StaffDashboardPage() {
+  const { user, isAdmin } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -43,15 +46,32 @@ export function StaffDashboardPage() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadDashboardData = () => {
+    setLoading(true);
     Promise.all([
       api.getStaffComplaints(),
       api.getAnalytics()
     ])
       .then(([resComp, resAna]) => {
-        if (resComp.success) {
-          setComplaints(resComp.complaints || []);
-          setStats(resComp.stats || {});
+        if (resComp.success && Array.isArray(resComp.complaints)) {
+          const list = resComp.complaints;
+          setComplaints(list);
+
+          const total = list.length;
+          const newCount = list.filter(c => c.status === 'SUBMITTED' || c.status === 'VERIFIED' || c.status === 'AI_ANALYZED').length;
+          const critical = list.filter(c => (c.priority === 'CRITICAL' || c.priority === 'HIGH' || c.priority === 'P1') && c.status !== 'RESOLVED').length;
+          const inProgress = list.filter(c => c.status === 'IN_PROGRESS' || c.status === 'ACTION_TAKEN').length;
+          const resolved = list.filter(c => c.status === 'RESOLVED').length;
+          const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+          setStats({
+            total,
+            new: newCount,
+            critical,
+            inProgress,
+            resolved,
+            resolutionRate
+          });
         }
         if (resAna.success) {
           setAnalytics(resAna.analytics || {});
@@ -59,6 +79,10 @@ export function StaffDashboardPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadDashboardData();
   }, []);
 
   const criticalComplaints = complaints.filter(c => c.priority === 'CRITICAL' && c.status !== 'RESOLVED');
@@ -73,12 +97,26 @@ export function StaffDashboardPage() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <StaffHeader
-          title="Analyst Dashboard"
-          subtitle="Real-time complaint intelligence, sentiment analytics, and SLA resolution velocity."
+          title={isAdmin ? "Operations Dashboard" : "Analyst Workspace"}
+          subtitle={isAdmin ? "Welcome back, Admin. Real-time complaint metrics & system intelligence." : "Welcome back. Overview of your assigned complaints and SLA velocity."}
         />
 
         <main className="p-6 space-y-6 flex-1">
           
+          <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 custom-shadow">
+            <div className="flex items-center space-x-2 text-xs text-slate-500 font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Live Database Connection Active • {complaints.length} Total Records Loaded</span>
+            </div>
+            <button
+              onClick={loadDashboardData}
+              className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Syncing...' : 'Sync Live Metrics'}</span>
+            </button>
+          </div>
+
           {/* Critical Alerts Banner */}
           {criticalComplaints.length > 0 && (
             <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between shadow-xs">
@@ -104,59 +142,83 @@ export function StaffDashboardPage() {
 
           {/* KPI Metrics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/complaints"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view all complaints"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Total</span>
-                <Inbox className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-blue-600 transition-colors">Total</span>
+                <Inbox className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
               </div>
-              <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
+              <p className="text-2xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">{stats.total}</p>
               <span className="text-2xs text-slate-500 font-medium">All Time Submissions</span>
-            </div>
+            </Link>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/complaints?status=SUBMITTED"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-amber-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view awaiting complaints"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">New</span>
-                <Zap className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-amber-600 transition-colors">New</span>
+                <Zap className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
               </div>
               <p className="text-2xl font-extrabold text-amber-600">{stats.new}</p>
               <span className="text-2xs text-slate-500 font-medium">Awaiting Analyst Action</span>
-            </div>
+            </Link>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/complaints?priority=CRITICAL"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-rose-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view high-risk issues"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Critical</span>
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-rose-600 transition-colors">Critical</span>
+                <AlertTriangle className="w-4 h-4 text-rose-600 group-hover:scale-110 transition-transform" />
               </div>
               <p className="text-2xl font-extrabold text-rose-600">{stats.critical}</p>
               <span className="text-2xs text-slate-500 font-medium">High Risk Issues</span>
-            </div>
+            </Link>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/complaints?status=IN_PROGRESS"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-sky-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view in-progress complaints"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">In Progress</span>
-                <Clock className="w-4 h-4 text-sky-600" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-sky-600 transition-colors">In Progress</span>
+                <Clock className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
               </div>
               <p className="text-2xl font-extrabold text-sky-600">{stats.inProgress}</p>
               <span className="text-2xs text-slate-500 font-medium">Under Investigation</span>
-            </div>
+            </Link>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/complaints?status=RESOLVED"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-emerald-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view resolved complaints"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Resolved</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Resolved</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
               </div>
               <p className="text-2xl font-extrabold text-emerald-600">{stats.resolved}</p>
               <span className="text-2xs text-slate-500 font-medium">Responses Sent</span>
-            </div>
+            </Link>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow">
+            <Link
+              to="/staff/reports"
+              className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow hover:border-indigo-300 hover:shadow-md transition-all group cursor-pointer block"
+              title="Click to view performance reports"
+            >
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Rate</span>
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Rate</span>
+                <TrendingUp className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
               </div>
               <p className="text-2xl font-extrabold text-indigo-600">{stats.resolutionRate}%</p>
               <span className="text-2xs text-slate-500 font-medium">Completion SLA</span>
-            </div>
+            </Link>
           </div>
 
           {/* Visual Intelligence Charts */}
@@ -169,7 +231,7 @@ export function StaffDashboardPage() {
                   <PieIcon className="w-4 h-4 text-blue-600 mr-2" />
                   Sentiment Breakdown
                 </h3>
-                <span className="text-2xs font-semibold text-slate-400">Gemini AI</span>
+                <span className="text-2xs font-semibold text-slate-400">Automated AI</span>
               </div>
               <div className="h-48">
                 {analytics?.sentiment && analytics.sentiment.length > 0 ? (
@@ -235,10 +297,15 @@ export function StaffDashboardPage() {
               <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
                 {analytics?.theme && analytics.theme.length > 0 ? (
                   analytics.theme.map((t, i) => (
-                    <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                    <Link
+                      key={i}
+                      to={`/staff/complaints?search=${encodeURIComponent(t.theme)}`}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 text-xs transition-colors cursor-pointer block"
+                      title={`Click to filter complaints by "${t.theme}"`}
+                    >
                       <span className="font-semibold text-slate-800 truncate max-w-[180px]">{t.theme}</span>
                       <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{t.count}</span>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs text-slate-400 text-center py-8">No themes extracted</p>
@@ -253,7 +320,7 @@ export function StaffDashboardPage() {
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Recent Customer Complaints</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Click any record to inspect Gemini AI analysis and resolve.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Click any record to inspect automated analysis and resolve.</p>
               </div>
               <Link
                 to="/staff/complaints"
@@ -271,9 +338,9 @@ export function StaffDashboardPage() {
                     <th className="py-3.5 px-6">Complaint ID</th>
                     <th className="py-3.5 px-4">Customer</th>
                     <th className="py-3.5 px-4">Category</th>
-                    <th className="py-3.5 px-4">Sentiment</th>
                     <th className="py-3.5 px-4">Priority</th>
                     <th className="py-3.5 px-4">Status</th>
+                    {isAdmin && <th className="py-3.5 px-4">Assigned Analyst</th>}
                     <th className="py-3.5 px-4">Created</th>
                     <th className="py-3.5 px-6 text-right">Action</th>
                   </tr>
@@ -290,21 +357,31 @@ export function StaffDashboardPage() {
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 font-medium">{c.category}</td>
                       <td className="py-3.5 px-4">
-                        <SentimentBadge sentiment={c.sentiment} score={c.sentimentScore} />
-                      </td>
-                      <td className="py-3.5 px-4">
                         <PriorityBadge priority={c.priority} />
                       </td>
                       <td className="py-3.5 px-4">
                         <StatusBadge status={c.status} />
                       </td>
+                      {isAdmin && (
+                        <td className="py-3.5 px-4">
+                          {c.assignedAnalystName ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-2xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              👤 {c.assignedAnalystName}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              ⚡ Unassigned
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-3.5 px-4 text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</td>
                       <td className="py-3.5 px-6 text-right">
                         <Link
                           to={`/staff/complaints/${c.id}`}
                           className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-lg border border-blue-200 transition-colors text-2xs"
                         >
-                          Review AI
+                          Review
                         </Link>
                       </td>
                     </tr>
