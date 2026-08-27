@@ -593,6 +593,7 @@ export function ComplaintDetailPage() {
                   </span>
                 </div>
 
+                {/* AI Key Indicators Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                     <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Severity & Urgency</span>
@@ -605,14 +606,44 @@ export function ComplaintDetailPage() {
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Suggested Dept</span>
-                    <span className="font-bold text-blue-300 block truncate">{deptForm.departmentName}</span>
+                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">AI Recognized Dept</span>
+                    <span className="font-bold text-blue-300 block truncate">{aiAnalysis?.recommendedDepartment || deptForm.departmentName}</span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                     <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Sentiment Score</span>
                     <SentimentBadge sentiment={aiAnalysis?.sentiment} score={aiAnalysis?.sentimentScore} />
                   </div>
+                </div>
+
+                {/* AI Recommended Department & Reasoning Card */}
+                <div className="bg-blue-950/60 p-4 rounded-xl border border-blue-800/80 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-300 flex items-center space-x-1.5">
+                      <Building2 className="w-4 h-4 text-blue-400" />
+                      <span>AI Department Recommendation: {aiAnalysis?.recommendedDepartment || deptForm.departmentName}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const rec = aiAnalysis?.recommendedDepartment || deptForm.departmentName;
+                        const match = departments.find(d => d.name.toLowerCase().includes(rec.toLowerCase()) || rec.toLowerCase().includes(d.name.toLowerCase()));
+                        setDeptForm(prev => ({
+                          ...prev,
+                          departmentName: match ? match.name : rec,
+                          departmentId: match ? match.id : prev.departmentId,
+                          reason: aiAnalysis?.departmentReason || prev.reason
+                        }));
+                        setShowDeptModal(true);
+                      }}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xs rounded-lg transition-all shadow-xs flex items-center space-x-1"
+                    >
+                      <span>Route via AI Dept ➔</span>
+                    </button>
+                  </div>
+                  <p className="text-slate-300 text-2xs italic">
+                    Reason: "{aiAnalysis?.departmentReason || 'AI identified issue patterns matching this department.'}"
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -732,8 +763,30 @@ export function ComplaintDetailPage() {
             </div>
 
             <form onSubmit={handleSendDepartmentRequest} className="space-y-4 text-xs">
+              {aiAnalysis?.recommendedDepartment && (
+                <div className="bg-blue-950/80 border border-blue-800/80 p-3 rounded-lg flex items-center justify-between text-blue-300">
+                  <div className="flex items-center space-x-1.5">
+                    <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>AI Recommended: <strong>{aiAnalysis.recommendedDepartment}</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rec = aiAnalysis.recommendedDepartment;
+                      const match = departments.find(d => d.name.toLowerCase().includes(rec.toLowerCase()) || rec.toLowerCase().includes(d.name.toLowerCase()));
+                      if (match) {
+                        setDeptForm(prev => ({ ...prev, departmentName: match.name, departmentId: match.id }));
+                      }
+                    }}
+                    className="text-3xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-2 py-1 rounded"
+                  >
+                    Select AI Dept
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Select Concerned Department *</label>
+                <label className="font-semibold text-slate-300">Concerned Department (Analyst Can Change / Override) *</label>
                 <select
                   required
                   value={deptForm.departmentName}
@@ -741,7 +794,7 @@ export function ComplaintDetailPage() {
                     const selected = departments.find(d => d.name === e.target.value);
                     setDeptForm({ ...deptForm, departmentName: e.target.value, departmentId: selected ? selected.id : '' });
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500 font-medium"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500 font-bold text-xs"
                 >
                   {departments.map(d => (
                     <option key={d.id} value={d.name}>{d.name} ({d.code})</option>

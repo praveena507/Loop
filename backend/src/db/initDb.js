@@ -221,7 +221,7 @@ export async function initDatabase() {
         `);
 
         // Migration safety for missing ai_analysis columns
-        const aiCols = ['confidence', 'severity', 'urgency', 'impact', 'affectedScope', 'priorityReason', 'keyFactors'];
+        const aiCols = ['confidence', 'severity', 'urgency', 'impact', 'affectedScope', 'priorityReason', 'keyFactors', 'recommendedDepartment', 'departmentReason'];
         for (const col of aiCols) {
           db.run(`ALTER TABLE ai_analysis ADD COLUMN ${col} TEXT`, () => {});
         }

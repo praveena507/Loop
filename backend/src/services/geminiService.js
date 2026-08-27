@@ -45,29 +45,33 @@ CRITICAL INSTRUCTIONS FOR ACCURACY & HALLUCINATION CONTROL:
    - HIGH (P2): Significant service impact, repeated failure, material customer inconvenience.
    - MEDIUM (P3): Standard operational inquiry requiring investigation; no immediate severe risk.
    - LOW (P4): Minor inconvenience, general feedback, non-urgent request.
+5. Identify the exact recommended organization department to investigate:
+   Options: Finance / Accounts, Payments, Customer Service, Technical / IT, Operations, Human Resources, Administration, Logistics, Security, Legal / Compliance, Infrastructure, Service Delivery.
 
 Return a valid JSON matching this exact schema:
 {
   "sentiment": "NEGATIVE" | "NEUTRAL" | "POSITIVE",
-  "sentimentScore": number (0.0 to 1.0),
+  "sentimentScore": 0.85,
   "category": "${category}",
   "sectionName": "${category} Section",
-  "rootCause": "Short 3-5 word classification (e.g. POS Double Charge, Queue Bottleneck, Auth Error)",
+  "rootCause": "Short 3-5 word classification",
   "theme": "Core issue theme cluster",
   "priority": "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
-  "priorityScore": number (0.0 to 1.0),
+  "priorityScore": 0.8,
+  "recommendedDepartment": "Exact department name from options list",
+  "departmentReason": "1 sentence explanation supporting why this department should investigate",
   "confidence": "High" | "Medium" | "Low",
   "severity": "Critical" | "Significant" | "Moderate" | "Minor",
   "urgency": "Immediate" | "Time Sensitive" | "Standard" | "Low Priority",
-  "impact": "High Operational Impact" | "Moderate Inconvenience" | "Low Impact" | "Insufficient information",
-  "affectedScope": "Multiple Users" | "Single User" | "Insufficient information",
-  "summary": "1-2 sentence concise executive summary based strictly on facts provided",
-  "priorityReason": "Clear operational reasoning supporting the recommended priority level",
-  "keyFactors": ["Factor 1 based on text", "Factor 2 based on evidence"],
-  "keywords": ["keyword1", "keyword2", "keyword3"],
-  "suggestedResponse": "Professional, empathetic response template for support staff",
+  "impact": "High Operational Impact" | "Moderate Inconvenience" | "Low Impact",
+  "affectedScope": "Multiple Users" | "Single User",
+  "summary": "1-2 sentence concise executive summary",
+  "priorityReason": "Clear operational reasoning",
+  "keyFactors": ["Factor 1", "Factor 2"],
+  "keywords": ["keyword1", "keyword2"],
+  "suggestedResponse": "Professional response template",
   "attachmentAnalyzed": ${hasAttachment ? 1 : 0},
-  "attachmentSummary": "${hasAttachment ? 'Document proof OCR summary extracting amounts, dates, or receipt numbers.' : 'No attachment uploaded.'}",
+  "attachmentSummary": "${hasAttachment ? 'Document proof OCR summary.' : 'No attachment uploaded.'}",
   "proofMatch": "${hasAttachment ? 'VERIFIED - Document Proof Matches Description' : 'N/A - No Attachment'}"
 }
 
@@ -89,6 +93,8 @@ ${fullText}
           theme: parsed.theme || `${category} Service Issue`,
           priority: parsed.priority.toUpperCase(),
           priorityScore: parsed.priorityScore || 0.8,
+          recommendedDepartment: parsed.recommendedDepartment || 'Customer Service',
+          departmentReason: parsed.departmentReason || 'Requires investigation by customer support.',
           confidence: parsed.confidence || 'High',
           severity: parsed.severity || 'Significant',
           urgency: parsed.urgency || 'Time Sensitive',
@@ -185,6 +191,27 @@ function fallbackAnalyzer({ reason, description, category, place, attachmentUrl 
 
   const suggestedResponse = `Dear Customer, Thank you for contacting LOOP Support. We have logged your ${category} complaint regarding "${reason}". Our team is actively investigating to provide a resolution.`;
 
+  let recommendedDepartment = 'Customer Service';
+  let departmentReason = 'General customer inquiry requiring support investigation.';
+
+  const catLower = (category || '').toLowerCase();
+  if (catLower.includes('payment') || combined.includes('money') || combined.includes('deduct') || combined.includes('paid') || combined.includes('refund') || combined.includes('charge')) {
+    recommendedDepartment = 'Payments';
+    departmentReason = 'AI detected a reported financial transaction, refund request, or payment gateway mismatch.';
+  } else if (catLower.includes('technical') || catLower.includes('it') || combined.includes('login') || combined.includes('bug') || combined.includes('error') || combined.includes('crash')) {
+    recommendedDepartment = 'Technical / IT';
+    departmentReason = 'AI identified a system error, portal issue, or technical access failure.';
+  } else if (catLower.includes('ops') || catLower.includes('service') || combined.includes('delay') || combined.includes('wait') || combined.includes('queue')) {
+    recommendedDepartment = 'Operations';
+    departmentReason = 'AI identified an operational turnaround or service delivery bottleneck.';
+  } else if (catLower.includes('hr') || combined.includes('staff') || combined.includes('employee') || combined.includes('behavior')) {
+    recommendedDepartment = 'Human Resources';
+    departmentReason = 'AI identified an internal staff conduct or policy compliance issue.';
+  } else if (catLower.includes('delivery') || catLower.includes('logistics') || combined.includes('ship') || combined.includes('parcel')) {
+    recommendedDepartment = 'Logistics';
+    departmentReason = 'AI identified a physical dispatch or package delivery issue.';
+  }
+
   return {
     sentiment,
     sentimentScore,
@@ -194,6 +221,8 @@ function fallbackAnalyzer({ reason, description, category, place, attachmentUrl 
     theme: `${category} Quality Control`,
     priority,
     priorityScore,
+    recommendedDepartment,
+    departmentReason,
     confidence,
     severity,
     urgency,

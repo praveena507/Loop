@@ -82,14 +82,16 @@ export async function verifyCode(req, res) {
             proofMatch: aiResult.proofMatch,
             rootCause: aiResult.rootCause,
             sectionName: aiResult.sectionName,
+            recommendedDepartment: aiResult.recommendedDepartment || 'Customer Service',
+            departmentReason: aiResult.departmentReason || 'Requires investigation by customer support.',
             createdAt: now,
             updatedAt: now
           };
 
           await dbRun(
             `INSERT INTO ai_analysis 
-             (id, complaintId, sentiment, sentimentScore, category, theme, priority, priorityScore, summary, keywords, suggestedResponse, attachmentAnalyzed, attachmentSummary, proofMatch, rootCause, sectionName, createdAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, complaintId, sentiment, sentimentScore, category, theme, priority, priorityScore, summary, keywords, suggestedResponse, attachmentAnalyzed, attachmentSummary, proofMatch, rootCause, sectionName, recommendedDepartment, departmentReason, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               aiData.id,
               aiData.complaintId,
@@ -107,6 +109,8 @@ export async function verifyCode(req, res) {
               aiData.proofMatch,
               aiData.rootCause,
               aiData.sectionName,
+              aiData.recommendedDepartment,
+              aiData.departmentReason,
               now,
               now
             ]
