@@ -79,6 +79,55 @@ export function ComplaintDetailPage() {
   // Confirmation Modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // Explicit AI Solution Generator State
+  const [aiGeneratingSolution, setAiGeneratingSolution] = useState(false);
+  const [solutionTone, setSolutionTone] = useState('FORMAL_RESOLVED');
+
+  // Admin Analyst Assignment State
+  const [analysts, setAnalysts] = useState([]);
+  const [targetAnalystId, setTargetAnalystId] = useState('');
+  const [assigningAnalyst, setAssigningAnalyst] = useState(false);
+
+  const handleGenerateAISolution = async () => {
+    if (!data?.complaint?.id) return;
+    setAiGeneratingSolution(true);
+    setError(null);
+    try {
+      const res = await api.generateExplicitSolution(data.complaint.id, {
+        tone: solutionTone,
+        customNotes: analystNotes
+      });
+      if (res.success && res.solution) {
+        setFinalResponse(res.solution);
+        setSuccessMsg('Explicit AI Resolution Draft generated! You can now manually edit or customize any text below before sending.');
+        setTimeout(() => setSuccessMsg(null), 5000);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to generate AI solution.');
+    } finally {
+      setAiGeneratingSolution(false);
+    }
+  };
+
+  const handleAssignAnalystSubmit = async (e) => {
+    e.preventDefault();
+    if (!targetAnalystId || !data?.complaint?.id) return;
+    setAssigningAnalyst(true);
+    setError(null);
+    try {
+      const res = await api.assignComplaint(data.complaint.id, targetAnalystId);
+      if (res.success) {
+        setSuccessMsg(res.message);
+        fetchDetail();
+        setTimeout(() => setSuccessMsg(null), 4000);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to assign analyst.');
+    } finally {
+      setAssigningAnalyst(false);
+    }
+  };
+
   const fetchDetail = () => {
     setLoading(true);
     const token = localStorage.getItem('loop_staff_token');
@@ -95,6 +144,10 @@ export function ComplaintDetailPage() {
           setSelectedStatus(resComp.complaint?.status || 'ASSIGNED');
           setFinalResponse(resComp.response?.responseText || resComp.aiAnalysis?.suggestedResponse || '');
           setEditedSuggestedResp(resComp.aiAnalysis?.suggestedResponse || '');
+
+          if (resComp.complaint?.assignedAnalystId) {
+            setTargetAnalystId(resComp.complaint.assignedAnalystId);
+          }
 
           // Pre-populate smart proof template based on category if department form is empty
           const category = resComp.complaint?.category || '';
@@ -121,6 +174,16 @@ export function ComplaintDetailPage() {
           if (resDepts.departments.length > 0) {
             setDeptForm(prev => ({ ...prev, departmentName: resDepts.departments[0].name, departmentId: resDepts.departments[0].id }));
           }
+        }
+
+        if (isAdmin) {
+          api.getAdminUsers()
+            .then(resUsers => {
+              if (resUsers.success && Array.isArray(resUsers.users)) {
+                setAnalysts(resUsers.users);
+              }
+            })
+            .catch(console.error);
         }
       })
       .catch(err => setError(err.message || 'Failed to load complaint.'))
@@ -580,7 +643,53 @@ export function ComplaintDetailPage() {
 
             {/* RIGHT COLUMN: AI Analysis, Final Review & User Response Form */}
             <div className="space-y-6">
-              
+
+              {/* ADMIN ANALYST ASSIGNMENT PANEL */}
+              {isAdmin && (
+                <div className="bg-white rounded-2xl border-2 border-indigo-200 custom-shadow p-5 space-y-3.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 bg-indigo-600 text-white rounded-xl shadow-xs">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-900">Admin Analyst Manual Assignment</h4>
+                        <p className="text-3xs text-slate-500 font-medium">Assign or re-assign incoming case to a specific staff analyst.</p>
+                      </div>
+                    </div>
+                    <span className={`text-3xs font-extrabold px-2.5 py-1 rounded-full border ${
+                      data?.complaint?.assignedAnalystId ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
+                    }`}>
+                      {data?.complaint?.assignedAnalystId ? 'Assigned ✓' : '⚠️ Unassigned (Incoming Case)'}
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleAssignAnalystSubmit} className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={targetAnalystId}
+                      onChange={(e) => setTargetAnalystId(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-300 text-slate-900 font-extrabold text-xs px-3 py-2 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                      <option value="">-- Select Staff Analyst to Assign --</option>
+                      {analysts.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.email}) • {u.pendingCount || 0} Active Cases
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="submit"
+                      disabled={assigningAnalyst || !targetAnalystId}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <UserCheck className="w-4 h-4 text-indigo-200" />
+                      <span>{assigningAnalyst ? 'Assigning...' : 'Assign Analyst ➔'}</span>
+                    </button>
+                  </form>
+                </div>
+              )}
+
               {/* GEMINI AI TRIAGE ANALYSIS */}
               <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-xl space-y-5 border border-slate-800">
                 <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
@@ -693,18 +802,68 @@ export function ComplaintDetailPage() {
                   </div>
                 </div>
 
-                {/* Final Response Text Field */}
+                {/* EXPLICIT AI SOLUTION GENERATOR TOOLBAR */}
+                <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-slate-50 p-4 rounded-2xl space-y-3 border border-blue-200/90 shadow-xs overflow-hidden">
+                  <div className="flex items-start space-x-2.5">
+                    <div className="p-1.5 bg-blue-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-extrabold text-slate-900 tracking-tight">Explicit AI Solution Generator</h4>
+                      <p className="text-2xs text-slate-500 font-medium leading-relaxed mt-0.5">
+                        Generates a step-by-step resolution response based on complaint details & department findings.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col space-y-2 pt-0.5">
+                    <div className="space-y-1">
+                      <label className="text-3xs font-bold text-slate-500 uppercase tracking-wider block">Select Resolution Focus & Tone:</label>
+                      <select
+                        value={solutionTone}
+                        onChange={(e) => setSolutionTone(e.target.value)}
+                        className="w-full bg-white border border-slate-300 text-slate-800 font-bold text-xs px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs truncate"
+                      >
+                        <option value="FORMAL_RESOLVED">Full Resolution & Action (Standard)</option>
+                        <option value="REFUND_PAYMENT">Refund & Payment Reversal</option>
+                        <option value="TECHNICAL_FIX">Technical Fix & System Patch</option>
+                        <option value="APOLOGY_COMPENSATION">Executive Apology & Goodwill</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateAISolution}
+                      disabled={aiGeneratingSolution}
+                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Sparkles className="w-4 h-4 text-blue-200" />
+                      <span>{aiGeneratingSolution ? 'Generating Explicit AI Solution...' : 'Generate Explicit AI Solution'}</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-blue-100/70 border border-blue-200/80 px-3 py-2 rounded-xl text-2xs text-blue-900 font-medium leading-normal">
+                    💡 <strong>Analyst Editing Control:</strong> AI drafts the solution. You can manually edit or customize any text in the box below before sending.
+                  </div>
+                </div>
+
+                {/* Final Response Text Field (100% Manually Editable) */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                    Final External Response to User (Emailed & Displayed on Public Tracker) *
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Final Response to User (Emailed & Public Tracker) *
+                    </label>
+                    <span className="text-3xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0 whitespace-nowrap">
+                      ✏️ Manual Edit Enabled
+                    </span>
+                  </div>
                   <textarea
-                    rows={4}
+                    rows={8}
                     required
-                    placeholder="Write the formal, professional response to be dispatched to the customer..."
+                    placeholder="Write or generate the formal, professional response to be dispatched to the customer..."
                     value={finalResponse}
                     onChange={(e) => setFinalResponse(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 leading-relaxed focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono shadow-2xs"
                   />
                 </div>
 

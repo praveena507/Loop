@@ -65,6 +65,7 @@ export const api = {
   },
   getStaffComplaintById: (id) => request(`/staff/complaints/${id}`),
   recordAction: (id, payload) => request(`/staff/complaints/${id}/action`, { method: 'POST', body: JSON.stringify(payload) }),
+  generateExplicitSolution: (id, payload) => request(`/staff/complaints/${id}/generate-solution`, { method: 'POST', body: JSON.stringify(payload || {}) }),
   resolveComplaint: (id, payload) => request(`/staff/complaints/${id}/response`, { method: 'POST', body: JSON.stringify(payload) }),
 
   // Analytics & Reports
@@ -78,6 +79,7 @@ export const api = {
   getAdminUsers: () => request('/admin/users'),
   createAdminUser: (userData) => request('/admin/users', { method: 'POST', body: JSON.stringify(userData) }),
   updateAdminUser: (id, userData) => request(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(userData) }),
+  resendAdminUserCredentials: (id) => request(`/admin/users/${id}/resend-credentials`, { method: 'POST' }),
   deleteAdminUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
   assignComplaint: (id, analystId) => request(`/admin/complaints/${id}/assign`, { method: 'POST', body: JSON.stringify({ analystId }) }),
   getAuditLogs: () => request('/admin/audit-logs'),

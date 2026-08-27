@@ -219,13 +219,20 @@ export async function sendSubmissionConfirmationEmail(email, complaintNumber) {
  * Send resolution response email to customer.
  */
 export async function sendResolutionEmail({ email, complaintNumber, responseText, resolutionDate }) {
+  const trackerUrl = `http://localhost:3000/track?complaintNumber=${encodeURIComponent(complaintNumber)}&email=${encodeURIComponent(email)}`;
+  const formattedDate = new Date(resolutionDate || Date.now()).toLocaleString();
+
+  const emailSubject = `[RESOLVED] Complaint #${complaintNumber} — Official Case Resolution Notice`;
+
   const sentViaEmailJS = await sendEmailViaEmailJS({
     to_email: email,
     user_email: email,
     complaint_number: complaintNumber,
+    status: 'RESOLVED',
     response_text: responseText,
-    resolution_date: resolutionDate,
-    subject: `Resolution Update for Complaint ${complaintNumber}`,
+    resolution_date: formattedDate,
+    tracker_url: trackerUrl,
+    subject: emailSubject,
     message: responseText
   });
 
@@ -235,30 +242,129 @@ export async function sendResolutionEmail({ email, complaintNumber, responseText
   if (transporter) {
     try {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"LOOP Support Team" <support@loop.com>',
+        from: process.env.SMTP_FROM || '"LOOP Customer Care" <support@loop.com>',
         to: email,
-        subject: `Resolution Update for Complaint ${complaintNumber}`,
+        subject: emailSubject,
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h3 style="color: #1e293b;">Complaint Resolution Notice</h3>
-            <p><strong>Complaint Reference:</strong> ${complaintNumber}</p>
-            <p><strong>Resolution Date:</strong> ${resolutionDate}</p>
-            <hr style="border: 0; border-top: 1px solid #e2e8f0;" />
-            <p style="color: #334155; white-space: pre-wrap;">${responseText}</p>
-            <hr style="border: 0; border-top: 1px solid #e2e8f0;" />
-            <p style="color: #64748b; font-size: 12px;">Regards,<br />LOOP Customer Intelligence Support Team</p>
+          <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+            <div style="text-align: center; padding-bottom: 16px; border-bottom: 2px solid #2563eb;">
+              <h2 style="color: #1e293b; margin: 0;">LOOP AI Customer Platform</h2>
+              <span style="display: inline-block; margin-top: 8px; background-color: #dcfce7; color: #15803d; font-weight: bold; padding: 4px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #bbf7d0;">
+                STATUS: RESOLVED ✓
+              </span>
+            </div>
+
+            <div style="padding: 20px 0; font-size: 14px; color: #334155; line-height: 1.6;">
+              <p style="margin-top: 0;">Dear Valued Customer,</p>
+              <p>We are pleased to inform you that your complaint reference <strong>${complaintNumber}</strong> has been officially investigated, actioned, and <strong>RESOLVED</strong> by our Case Coordination team.</p>
+
+              <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p style="margin: 0; font-weight: bold; color: #1e293b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Official Resolution Statement:</p>
+                <div style="white-space: pre-wrap; margin-top: 8px; color: #1e293b; font-size: 14px;">${responseText}</div>
+              </div>
+
+              <div style="background-color: #f1f5f9; padding: 12px 16px; border-radius: 8px; font-size: 12px; color: #64748b; margin-bottom: 20px;">
+                <strong>Complaint Reference:</strong> ${complaintNumber}<br />
+                <strong>Resolution Date & Time:</strong> ${formattedDate}<br />
+                <strong>Registered Email:</strong> ${email}
+              </div>
+
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${trackerUrl}" style="background-color: #2563eb; color: #ffffff; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 10px; display: inline-block; font-size: 14px;">
+                  View Case Resolution & Rate Service ➔
+                </a>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #94a3b8; text-align: center;">
+              Thank you for trusting LOOP Operational Grievance Platform.<br />
+              This is an automated operational notification sent to ${email}.
+            </div>
           </div>
         `
       });
+      console.log(`[EMAIL SERVICE - SMTP] Resolution status email dispatched to: ${email}`);
     } catch (err) {
       console.error('Failed to send resolution email via SMTP:', err.message);
     }
   } else {
     console.log(`\n==================================================`);
-    console.log(`[EMAIL SERVICE] Resolution Notice Sent to Customer`);
-    console.log(`To: ${email}`);
-    console.log(`Subject: Update on your complaint ${complaintNumber}`);
-    console.log(`Response Text: ${responseText}`);
+    console.log(`[EMAIL SERVICE] 📧 RESOLUTION STATUS EMAIL DISPATCHED`);
+    console.log(`Recipient Email: ${email}`);
+    console.log(`Complaint Number: ${complaintNumber}`);
+    console.log(`Status: RESOLVED ✓`);
+    console.log(`Resolution Date: ${formattedDate}`);
+    console.log(`Resolution Response:\n${responseText}`);
+    console.log(`Public Tracker Link: ${trackerUrl}`);
+    console.log(`==================================================\n`);
+  }
+  return true;
+}
+
+/**
+ * Send Analyst Account Welcome & Credentials Email.
+ */
+export async function sendAnalystWelcomeEmail({ name, email, password, role = 'ANALYST' }) {
+  const portalUrl = 'http://localhost:3000/office';
+  const emailSubject = `Welcome to LOOP Team — Your ${role} Credentials`;
+
+  const sentViaEmailJS = await sendEmailViaEmailJS({
+    to_email: email,
+    user_email: email,
+    user_name: name,
+    password: password,
+    role: role,
+    portal_url: portalUrl,
+    subject: emailSubject,
+    message: `Your staff account (${role}) has been activated. Email: ${email}, Password: ${password}`
+  });
+
+  if (sentViaEmailJS) return true;
+
+  const transporter = createTransporter();
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"LOOP Administration" <admin@loop.com>',
+        to: email,
+        subject: emailSubject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+            <div style="text-align: center; padding-bottom: 16px; border-bottom: 2px solid #2563eb;">
+              <h2 style="color: #1e293b; margin: 0;">LOOP Staff Intelligence Portal</h2>
+              <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Staff Account Provisioning</p>
+            </div>
+            <div style="padding: 20px 0; font-size: 14px; color: #334155; line-height: 1.6;">
+              <p>Dear <strong>${name}</strong>,</p>
+              <p>Your <strong>${role}</strong> staff account has been successfully created by System Administration. Below are your account login credentials:</p>
+              <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 12px; margin: 16px 0; font-family: monospace;">
+                <p style="margin: 0 0 8px 0;"><strong>Staff Email:</strong> ${email}</p>
+                <p style="margin: 0;"><strong>Assigned Password:</strong> <span style="background-color: #fef08a; padding: 2px 6px; border-radius: 4px; color: #854d0e;">${password}</span></p>
+              </div>
+              <p style="font-size: 12px; color: #64748b;">
+                * You can log in using these credentials. If you change your password, your administrator will remain updated.
+              </p>
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${portalUrl}" style="background-color: #2563eb; color: #ffffff; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 10px; display: inline-block; font-size: 14px;">
+                  Sign In to Staff Portal ➔
+                </a>
+              </div>
+            </div>
+          </div>
+        `
+      });
+      console.log(`[EMAIL SERVICE - SMTP] Analyst credentials email sent to: ${email}`);
+    } catch (err) {
+      console.error('Failed to send analyst welcome email via SMTP:', err.message);
+    }
+  } else {
+    console.log(`\n==================================================`);
+    console.log(`[EMAIL SERVICE] 📧 STAFF ANALYST CREDENTIALS DISPATCHED`);
+    console.log(`Staff Member: ${name}`);
+    console.log(`Staff Email: ${email}`);
+    console.log(`Assigned Password: ${password}`);
+    console.log(`Role: ${role}`);
+    console.log(`Portal Link: ${portalUrl}`);
     console.log(`==================================================\n`);
   }
   return true;

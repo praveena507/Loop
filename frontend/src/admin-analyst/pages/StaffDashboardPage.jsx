@@ -16,7 +16,8 @@ import {
   ArrowUpRight,
   Flame,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -108,13 +109,24 @@ export function StaffDashboardPage() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Live Database Connection Active • {complaints.length} Total Records Loaded</span>
             </div>
-            <button
-              onClick={loadDashboardData}
-              className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Syncing...' : 'Sync Live Metrics'}</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              {isAdmin && (
+                <Link
+                  to="/staff/admin/users"
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-200" />
+                  <span>Manage Analysts</span>
+                </Link>
+              )}
+              <button
+                onClick={loadDashboardData}
+                className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>{loading ? 'Syncing...' : 'Sync Live Metrics'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Critical Alerts Banner */}

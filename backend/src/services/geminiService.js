@@ -238,3 +238,126 @@ function fallbackAnalyzer({ reason, description, category, place, attachmentUrl 
     proofMatch
   };
 }
+
+/**
+ * Generates an explicit, highly detailed resolution response tailored to department findings & complaint context.
+ */
+export async function generateExplicitSolutionWithGemini({
+  complainantName,
+  reason,
+  description,
+  category,
+  place,
+  departmentName,
+  investigationFindings,
+  actionTaken,
+  rootCause,
+  evidenceProvided,
+  tone = 'FORMAL_RESOLVED',
+  customNotes = ''
+}) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+      const prompt = `
+You are the Senior Grievance Resolution Lead at LOOP Enterprise Platform.
+Draft a comprehensive, highly explicit, professional, and empathetic final resolution response to be sent to the customer.
+
+CUSTOMER COMPLAINT CONTEXT:
+- Complainant Name: ${complainantName}
+- Issue Title/Reason: ${reason}
+- Category: ${category}
+- Location/Platform: ${place || 'N/A'}
+- Full Details: ${description || 'N/A'}
+
+DEPARTMENT INVESTIGATION FINDINGS:
+- Concerned Department: ${departmentName || 'Operations / Customer Service'}
+- Root Cause Identified: ${rootCause || 'Operational issue'}
+- Investigation Findings: ${investigationFindings || 'Department completed thorough audit of logs and records.'}
+- Remedial Action Taken: ${actionTaken || 'Remedial steps applied and verified.'}
+- Evidence / Verification Proof: ${evidenceProvided || 'Verified by internal department systems.'}
+- Analyst Internal Notes: ${customNotes || 'None'}
+
+DESIRED TONE & STYLE: ${tone}
+
+REQUIREMENTS:
+1. Address customer by name warmly ("Dear ${complainantName},").
+2. Explicitly reference their specific complaint reason and reported issue.
+3. Detail the exact investigation findings conducted by the ${departmentName || 'concerned'} department.
+4. State the explicit resolution, financial adjustment, download link re-activation, or system fix executed with reference IDs if applicable.
+5. Outline preventative measures implemented to prevent recurrence.
+6. Reiterate commitment to customer satisfaction and provide support contact info.
+7. Return ONLY the plain text resolution letter without markdown formatting or JSON code blocks.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const solutionText = result.response.text();
+      if (solutionText && solutionText.trim().length > 50) {
+        return solutionText.trim();
+      }
+    } catch (err) {
+      console.warn('Gemini API call failed for solution generator, using template:', err.message);
+    }
+  }
+
+  // Corporate Fallback Explicit Solution Generator
+  const greeting = `Dear ${complainantName || 'Valued Customer'},`;
+
+  let body = '';
+  if (tone === 'REFUND_PAYMENT' || category.toLowerCase().includes('payment')) {
+    body = `Thank you for bringing your ${category.toLowerCase()} concern regarding "${reason}" to LOOP Support.
+
+Following your report, our Case Coordination team routed your file to our ${departmentName || 'Payments & Finance'} Department for an in-depth audit.
+
+INVESTIGATION FINDINGS:
+${investigationFindings || rootCause || 'Our payments gateway audit confirmed a temporary synchronization latency between the payment gateway and order fulfillment systems.'}
+
+REMEDIAL ACTION EXECUTED:
+1. ${actionTaken || 'Our finance department has processed a full reversal / transaction confirmation for your account.'}
+2. Transaction Reference: TXN-${Math.floor(100000 + Math.random() * 900000)} has been updated in our settlement system.
+3. Verified by Department Proof: ${evidenceProvided || 'Gateway Reconciliation Log Verified.'}
+
+We sincerely apologize for the delay and inconvenience caused. Our engineering team has deployed enhanced automated webhook listeners to prevent transaction sync failures in the future.
+
+Should you require any further assistance, please contact our priority support desk.
+
+Sincerely,
+LOOP Grievance & Case Resolution Team`;
+  } else if (tone === 'TECHNICAL_FIX' || category.toLowerCase().includes('technical') || category.toLowerCase().includes('product')) {
+    body = `We are writing to inform you that your complaint regarding "${reason}" at ${place || 'our portal'} has been fully resolved.
+
+DEPARTMENT INVESTIGATION FINDINGS:
+Our ${departmentName || 'Technical / IT'} Department performed a comprehensive system log audit.
+- Identified Root Cause: ${rootCause || 'Access permission bottleneck on server storage endpoint.'}
+- Technical Findings: ${investigationFindings || 'System logs confirmed HTTP authorization error preventing asset download.'}
+
+EXPLICIT ACTION TAKEN:
+1. ${actionTaken || 'Our engineering team updated access permission tokens and re-generated your file download link.'}
+2. Server patch deployed and verified across primary operational nodes.
+
+Your access has been fully restored. Please retry accessing your account or download link.
+
+Warm regards,
+LOOP Operational Tech Resolution Desk`;
+  } else {
+    body = `Thank you for reaching out to LOOP Support regarding "${reason}".
+
+Following a thorough investigation coordinated with our ${departmentName || 'Operations'} Department, we have completed the operational review of your case.
+
+SUMMARY OF FINDINGS & RESOLUTION:
+- Root Cause: ${rootCause || 'Operational service delivery mismatch.'}
+- Investigation Findings: ${investigationFindings || 'Department verified operational records and confirmed the reported issue details.'}
+- Action Taken: ${actionTaken || 'Full corrective action has been executed and verified by our operational supervisor.'}
+
+We appreciate your patience while our team worked to resolve this issue. If you have any additional questions, please feel free to reply directly to this case tracker.
+
+Best regards,
+LOOP Case Coordination Team`;
+  }
+
+  return `${greeting}\n\n${body}`;
+}

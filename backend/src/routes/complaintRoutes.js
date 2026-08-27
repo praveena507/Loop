@@ -8,7 +8,8 @@ import {
   resolveComplaintAndRespond,
   createDepartmentRequest,
   submitDepartmentReport,
-  reviewDepartmentReport
+  reviewDepartmentReport,
+  generateExplicitSolutionController
 } from '../controllers/complaintController.js';
 import { authenticateStaff } from '../middleware/authMiddleware.js';
 
@@ -27,6 +28,7 @@ router.get('/staff/complaints/:id', authenticateStaff, getStaffComplaintById);
 router.post('/staff/complaints/:id/action', authenticateStaff, recordComplaintAction);
 router.post('/staff/complaints/:id/department-request', authenticateStaff, createDepartmentRequest);
 router.post('/staff/complaints/:id/review-department-report', authenticateStaff, reviewDepartmentReport);
+router.post('/staff/complaints/:id/generate-solution', authenticateStaff, generateExplicitSolutionController);
 router.post('/staff/complaints/:id/response', authenticateStaff, resolveComplaintAndRespond);
 router.post('/staff/complaints/:id/resolve', authenticateStaff, resolveComplaintAndRespond);
 

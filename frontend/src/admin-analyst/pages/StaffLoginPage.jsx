@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../shared/context/AuthContext';
 import { api } from '../../shared/services/api';
-import { Cpu, Lock, Mail, Eye, EyeOff, AlertCircle, Shield, KeyRound, CheckCircle2, X, Sparkles, UserCheck, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Cpu, Lock, Mail, Eye, EyeOff, AlertCircle, Shield, KeyRound, CheckCircle2, X, Sparkles, UserCheck, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export function StaffLoginPage() {
   const navigate = useNavigate();
@@ -12,8 +12,8 @@ export function StaffLoginPage() {
   const [activeTab, setActiveTab] = useState('ANALYST');
 
   // Login Form State
-  const [email, setEmail] = useState('analyst@loop.com');
-  const [password, setPassword] = useState('Analyst@12345');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,64 +30,12 @@ export function StaffLoginPage() {
   const [forgotError, setForgotError] = useState(null);
   const [forgotSuccess, setForgotSuccess] = useState(null);
 
-  // Register Analyst Modal State
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regLoading, setRegLoading] = useState(false);
-  const [regError, setRegError] = useState(null);
-  const [regSuccess, setRegSuccess] = useState(null);
-
   // Quick Switch Roles
   const handleSwitchTab = (role) => {
     setActiveTab(role);
     setError(null);
-    if (role === 'ANALYST') {
-      setEmail('analyst@loop.com');
-      setPassword('Analyst@12345');
-    } else {
-      setEmail('admin@loop.com');
-      setPassword('Admin@12345');
-    }
-  };
-
-  const handleRegisterAnalystSubmit = async (e) => {
-    e.preventDefault();
-    setRegError(null);
-    setRegSuccess(null);
-
-    if (!regName.trim() || !regEmail.trim() || !regPassword) {
-      setRegError('Please fill in all required fields.');
-      return;
-    }
-
-    setRegLoading(true);
-    try {
-      const res = await api.staffRegisterAnalyst({
-        name: regName.trim(),
-        email: regEmail.trim(),
-        password: regPassword
-      });
-
-      if (res.success) {
-        setRegSuccess('Analyst account registered successfully! Auto-selecting account...');
-        setTimeout(() => {
-          setActiveTab('ANALYST');
-          setEmail(regEmail.trim());
-          setPassword(regPassword);
-          setShowRegisterModal(false);
-          setRegName('');
-          setRegEmail('');
-          setRegPassword('');
-          setRegSuccess(null);
-        }, 1500);
-      }
-    } catch (err) {
-      setRegError(err.message || 'Failed to register analyst account.');
-    } finally {
-      setRegLoading(false);
-    }
+    setEmail('');
+    setPassword('');
   };
 
   const handleLoginSubmit = async (e) => {
@@ -223,12 +171,12 @@ export function StaffLoginPage() {
             onClick={() => handleSwitchTab('ADMIN')}
             className={`p-3.5 rounded-xl transition-all flex flex-col items-center justify-center text-center cursor-pointer ${
               activeTab === 'ADMIN'
-                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold border border-rose-500'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold border border-indigo-500'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900/60 font-medium'
             }`}
           >
             <div className="flex items-center space-x-2">
-              <ShieldAlert className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4 text-indigo-200" />
               <span className="text-sm">Admin Login Section</span>
             </div>
             <span className="text-2xs opacity-80 mt-0.5">User Management & Audit Logs</span>
@@ -243,14 +191,11 @@ export function StaffLoginPage() {
           <div className={`mb-6 p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold ${
             activeTab === 'ANALYST'
               ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-              : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
           }`}>
             <span className="flex items-center">
-              <Shield className="w-4 h-4 mr-2" />
+              {activeTab === 'ANALYST' ? <UserCheck className="w-4 h-4 mr-2 text-blue-400" /> : <ShieldCheck className="w-4 h-4 mr-2 text-indigo-400" />}
               {activeTab === 'ANALYST' ? 'ANALYST PORTAL SECTION' : 'ADMINISTRATOR PORTAL SECTION'}
-            </span>
-            <span className="text-2xs font-mono bg-slate-900 px-2 py-0.5 rounded text-slate-300 border border-slate-700">
-              Preset Loaded ✓
             </span>
           </div>
 
@@ -261,7 +206,7 @@ export function StaffLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleLoginSubmit} className="space-y-5">
+          <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-5">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                 {activeTab === 'ANALYST' ? 'Analyst Email Address' : 'Admin Email Address'}
@@ -271,10 +216,13 @@ export function StaffLoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder={activeTab === 'ANALYST' ? 'analyst@loop.com' : 'admin@loop.com'}
+                  autoComplete="off"
+                  placeholder={activeTab === 'ANALYST' ? 'e.g. analyst@loop.com' : 'e.g. admin@loop.com'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:border-transparent transition-all font-medium ${
+                    activeTab === 'ANALYST' ? 'focus:ring-blue-500' : 'focus:ring-indigo-500'
+                  }`}
                 />
               </div>
             </div>
@@ -293,7 +241,9 @@ export function StaffLoginPage() {
                     setForgotSuccess(null);
                     setShowForgotModal(true);
                   }}
-                  className="text-2xs text-blue-400 font-semibold hover:underline"
+                  className={`text-2xs font-semibold hover:underline ${
+                    activeTab === 'ANALYST' ? 'text-blue-400' : 'text-indigo-400'
+                  }`}
                 >
                   Forgot Password?
                 </button>
@@ -303,10 +253,13 @@ export function StaffLoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  className={`w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:border-transparent transition-all font-medium ${
+                    activeTab === 'ANALYST' ? 'focus:ring-blue-500' : 'focus:ring-indigo-500'
+                  }`}
                 />
                 <button
                   type="button"
@@ -324,10 +277,10 @@ export function StaffLoginPage() {
               className={`w-full py-3.5 px-4 rounded-xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer ${
                 activeTab === 'ANALYST'
                   ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
-                  : 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
+                  : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
               }`}
             >
-              <Shield className="w-4 h-4" />
+              {activeTab === 'ANALYST' ? <UserCheck className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
               <span>
                 {authLoading
                   ? 'Authenticating...'
@@ -337,63 +290,6 @@ export function StaffLoginPage() {
               </span>
             </button>
           </form>
-
-          {/* Registration Option */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setRegError(null);
-                setRegSuccess(null);
-                setShowRegisterModal(true);
-              }}
-              className="text-xs font-semibold text-blue-400 hover:underline inline-flex items-center space-x-1"
-            >
-              <UserCheck className="w-3.5 h-3.5 mr-1" />
-              <span>Need a new Analyst account? Register Analyst</span>
-            </button>
-          </div>
-
-          {/* Quick Credential Pre-fill Cards */}
-          <div className="mt-8 pt-6 border-t border-slate-700/80 space-y-3">
-            <p className="text-xs font-bold text-slate-300">Quick Test Credentials (Seeded):</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-2xs">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('ANALYST')}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  activeTab === 'ANALYST'
-                    ? 'bg-blue-500/20 border-blue-500/60 text-blue-200'
-                    : 'bg-slate-900/60 border-slate-700/60 text-slate-400 hover:border-slate-600'
-                }`}
-              >
-                <div className="font-bold text-white flex items-center justify-between">
-                  <span>Analyst Credentials</span>
-                  {activeTab === 'ANALYST' && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />}
-                </div>
-                <div className="font-mono mt-1 text-slate-300">analyst@loop.com</div>
-                <div className="font-sans text-slate-400 mt-0.5">Pass: Analyst@12345</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('ADMIN')}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  activeTab === 'ADMIN'
-                    ? 'bg-rose-500/20 border-rose-500/60 text-rose-200'
-                    : 'bg-slate-900/60 border-slate-700/60 text-slate-400 hover:border-slate-600'
-                }`}
-              >
-                <div className="font-bold text-white flex items-center justify-between">
-                  <span>Admin Credentials</span>
-                  {activeTab === 'ADMIN' && <CheckCircle2 className="w-3.5 h-3.5 text-rose-400" />}
-                </div>
-                <div className="font-mono mt-1 text-slate-300">admin@loop.com</div>
-                <div className="font-sans text-slate-400 mt-0.5">Pass: Admin@12345</div>
-              </button>
-            </div>
-          </div>
 
         </div>
 
@@ -560,104 +456,6 @@ export function StaffLoginPage() {
                 </div>
               </form>
             )}
-
-          </div>
-        </div>
-      )}
-
-      {/* Analyst Registration Modal */}
-      {showRegisterModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 text-white shadow-2xl">
-            
-            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-              <div className="flex items-center space-x-2">
-                <UserCheck className="w-5 h-5 text-blue-400" />
-                <h3 className="text-base font-bold">Register New Staff Analyst</h3>
-              </div>
-              <button
-                onClick={() => setShowRegisterModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {regError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{regError}</span>
-              </div>
-            )}
-
-            {regSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{regSuccess}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleRegisterAnalystSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sarah Jenkins"
-                  value={regName}
-                  onChange={(e) => setRegName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                  Staff Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. s.jenkins@loop.com"
-                  value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="At least 6 characters"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={regLoading}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 flex items-center space-x-1"
-                >
-                  <UserCheck className="w-3.5 h-3.5 mr-1" />
-                  <span>{regLoading ? 'Registering...' : 'Register Analyst Account'}</span>
-                </button>
-              </div>
-            </form>
 
           </div>
         </div>

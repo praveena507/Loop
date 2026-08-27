@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { dbAll, dbGet, dbRun } from '../db/initDb.js';
+import { sendAnalystWelcomeEmail } from '../services/emailService.js';
 
 export async function getUsers(req, res) {
   try {
     const users = await dbAll(
-      `SELECT id, name, email, role, status, createdAt, updatedAt FROM staff_users ORDER BY createdAt DESC`
+      `SELECT id, name, email, plainPassword, role, status, createdAt, updatedAt FROM staff_users ORDER BY createdAt DESC`
     );
 
     // Compute workload stats for each user
@@ -103,7 +104,7 @@ export async function assignComplaint(req, res) {
     );
 
     let newStatus = complaint.status;
-    if (analystId && (complaint.status === 'SUBMITTED' || complaint.status === 'VERIFIED')) {
+    if (analystId && (complaint.status === 'SUBMITTED' || complaint.status === 'VERIFIED' || complaint.status === 'AI_ANALYZED')) {
       newStatus = 'IN_PROGRESS';
       await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', [newStatus, now, complaint.id]);
     }
@@ -136,7 +137,7 @@ export async function assignComplaint(req, res) {
 
 export async function createUser(req, res) {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, sendEmailNotification = true } = req.body;
     if (!name || !email || !password || !role) {
       return res.status(400).json({ success: false, error: 'Name, email, password, and role are required.' });
     }
@@ -151,25 +152,36 @@ export async function createUser(req, res) {
     const id = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
     await dbRun(
-      `INSERT INTO staff_users (id, name, email, passwordHash, role, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?)`,
-      [id, name.trim(), email.trim().toLowerCase(), passwordHash, role.toUpperCase(), now, now]
+      `INSERT INTO staff_users (id, name, email, passwordHash, plainPassword, role, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)`,
+      [id, name.trim(), email.trim().toLowerCase(), passwordHash, password, role.toUpperCase(), now, now]
     );
+
+    // Dispatch welcome email with credentials
+    if (sendEmailNotification) {
+      await sendAnalystWelcomeEmail({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password,
+        role: role.toUpperCase()
+      });
+    }
 
     // Audit log
     await dbRun(
       `INSERT INTO audit_logs (id, userId, action, entity, entityId, ipAddress, createdAt)
        VALUES (?, ?, 'CREATE_STAFF_USER', 'staff_users', ?, ?, ?)`,
-      [`audit_${Date.now()}`, req.user.id, id, req.ip || '127.0.0.1', now]
+      [`audit_${Date.now()}`, req.user ? req.user.id : id, id, req.ip || '127.0.0.1', now]
     );
 
     return res.status(201).json({
       success: true,
-      message: 'Staff user created successfully.',
-      user: { id, name: name.trim(), email: email.trim().toLowerCase(), role: role.toUpperCase(), status: 'ACTIVE' }
+      message: `Staff account (${role}) created and credentials email dispatched to ${email}.`,
+      user: { id, name: name.trim(), email: email.trim().toLowerCase(), role: role.toUpperCase(), status: 'ACTIVE', plainPassword: password }
     });
 
   } catch (err) {
+    console.error('createUser error:', err);
     return res.status(500).json({ success: false, error: 'Failed to create staff user.' });
   }
 }
@@ -177,7 +189,7 @@ export async function createUser(req, res) {
 export async function updateUser(req, res) {
   try {
     const { id } = req.params;
-    const { role, status, password } = req.body;
+    const { role, status, password, sendCredentialsEmail } = req.body;
     const now = new Date().toISOString();
 
     const user = await dbGet('SELECT * FROM staff_users WHERE id = ?', [id]);
@@ -196,8 +208,8 @@ export async function updateUser(req, res) {
     }
     if (password && password.trim() !== '') {
       const hash = await bcrypt.hash(password, 10);
-      sql += ', passwordHash = ?';
-      params.push(hash);
+      sql += ', passwordHash = ?, plainPassword = ?';
+      params.push(hash, password.trim());
     }
 
     sql += ' WHERE id = ?';
@@ -205,17 +217,51 @@ export async function updateUser(req, res) {
 
     await dbRun(sql, params);
 
+    if (sendCredentialsEmail || password) {
+      const activePassword = password || user.plainPassword || 'Analyst@12345';
+      await sendAnalystWelcomeEmail({
+        name: user.name,
+        email: user.email,
+        password: activePassword,
+        role: role || user.role
+      });
+    }
+
     // Audit log
     await dbRun(
       `INSERT INTO audit_logs (id, userId, action, entity, entityId, ipAddress, createdAt)
        VALUES (?, ?, 'UPDATE_STAFF_USER', 'staff_users', ?, ?, ?)`,
-      [`audit_${Date.now()}`, req.user.id, id, req.ip || '127.0.0.1', now]
+      [`audit_${Date.now()}`, req.user ? req.user.id : user.id, id, req.ip || '127.0.0.1', now]
     );
 
     return res.json({ success: true, message: 'Staff user updated successfully.' });
 
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to update staff user.' });
+  }
+}
+
+export async function resendAnalystCredentials(req, res) {
+  try {
+    const { id } = req.params;
+    const user = await dbGet('SELECT * FROM staff_users WHERE id = ?', [id]);
+    if (!user) return res.status(404).json({ success: false, error: 'Staff analyst account not found.' });
+
+    const activePassword = user.plainPassword || 'Analyst@12345';
+    await sendAnalystWelcomeEmail({
+      name: user.name,
+      email: user.email,
+      password: activePassword,
+      role: user.role
+    });
+
+    return res.json({
+      success: true,
+      message: `Account credentials email successfully re-dispatched to ${user.email}.`
+    });
+  } catch (err) {
+    console.error('resendAnalystCredentials error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to dispatch analyst credentials email.' });
   }
 }
 

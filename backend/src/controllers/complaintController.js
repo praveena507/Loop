@@ -1,5 +1,6 @@
 import { dbRun, dbGet, dbAll, supabaseQuery } from '../db/initDb.js';
 import { sendResolutionEmail, createEmailVerification } from '../services/emailService.js';
+import { generateExplicitSolutionWithGemini } from '../services/geminiService.js';
 
 export async function createComplaint(req, res) {
   try {
@@ -711,6 +712,57 @@ export async function resolveComplaintAndRespond(req, res) {
   } catch (err) {
     console.error('Resolve complaint error:', err);
     return res.status(500).json({ success: false, error: 'Failed to resolve complaint.' });
+  }
+}
+
+export async function generateExplicitSolutionController(req, res) {
+  try {
+    const { id } = req.params;
+    const { tone, customNotes } = req.body;
+
+    const complaint = await dbGet('SELECT * FROM complaints WHERE id = ? OR complaintNumber = ?', [id, id]);
+    if (!complaint) {
+      return res.status(404).json({ success: false, error: 'Complaint not found.' });
+    }
+
+    const aiAnalysis = await dbGet('SELECT * FROM ai_analysis WHERE complaintId = ?', [complaint.id]);
+
+    const activeReq = await dbGet(
+      'SELECT * FROM department_requests WHERE complaintId = ? ORDER BY createdAt DESC LIMIT 1',
+      [complaint.id]
+    );
+
+    let deptReport = null;
+    if (activeReq) {
+      deptReport = await dbGet(
+        'SELECT * FROM department_reports WHERE requestId = ? ORDER BY createdAt DESC LIMIT 1',
+        [activeReq.id]
+      );
+    }
+
+    const explicitSolution = await generateExplicitSolutionWithGemini({
+      complainantName: complaint.name,
+      reason: complaint.reason,
+      description: complaint.description,
+      category: complaint.category,
+      place: complaint.place,
+      departmentName: activeReq?.departmentName || aiAnalysis?.recommendedDepartment,
+      investigationFindings: deptReport?.investigationFindings || aiAnalysis?.summary,
+      actionTaken: deptReport?.actionTaken,
+      rootCause: deptReport?.rootCause || aiAnalysis?.rootCause,
+      evidenceProvided: deptReport?.evidenceProvided || aiAnalysis?.proofMatch,
+      tone: tone || 'FORMAL_RESOLVED',
+      customNotes: customNotes || ''
+    });
+
+    return res.json({
+      success: true,
+      solution: explicitSolution
+    });
+
+  } catch (err) {
+    console.error('Generate explicit solution error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to generate explicit AI solution.' });
   }
 }
 

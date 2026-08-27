@@ -99,7 +99,7 @@ export function StaffSidebar() {
               </NavLink>
               <NavLink to="/staff/admin/users" className={navItemClass}>
                 <Users className="w-4 h-4" />
-                <span>User Management</span>
+                <span>Manage Analysts</span>
               </NavLink>
               <NavLink to="/staff/admin/settings" className={navItemClass}>
                 <Settings className="w-4 h-4" />

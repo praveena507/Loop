@@ -163,12 +163,14 @@ export async function initDatabase() {
             name TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             passwordHash TEXT NOT NULL,
+            plainPassword TEXT,
             role TEXT CHECK(role IN ('ADMIN', 'ANALYST')) NOT NULL,
             status TEXT CHECK(status IN ('ACTIVE', 'INACTIVE')) DEFAULT 'ACTIVE',
             createdAt TEXT NOT NULL,
             updatedAt TEXT NOT NULL
           );
         `);
+        db.run(`ALTER TABLE staff_users ADD COLUMN plainPassword TEXT`, () => {});
 
         // 3. COMPLAINTS
         db.run(`
