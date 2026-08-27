@@ -9,8 +9,12 @@ export function StatusBadge({ status }) {
     ASSIGNED: { label: 'Assigned', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
     UNDER_REVIEW: { label: 'Under Review', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
     IN_PROGRESS: { label: 'In Progress', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+    WAITING_FOR_DEPARTMENT: { label: 'Awaiting Dept Response', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300' },
+    READY_FOR_ANALYST_REVIEW: { label: 'Dept Report Received', bg: 'bg-indigo-50', text: 'text-indigo-800', border: 'border-indigo-300' },
+    READY_FOR_USER_RESPONSE: { label: 'Ready for User Response', bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-300' },
     ACTION_TAKEN: { label: 'Action Taken', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
     RESOLVED: { label: 'Resolved', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    ESCALATED: { label: 'Escalated', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
     RESPONSE_SENT: { label: 'Response Sent', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
     CLOSED: { label: 'Closed', bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' }
   };

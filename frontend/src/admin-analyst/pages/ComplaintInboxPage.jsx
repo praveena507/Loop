@@ -190,9 +190,13 @@ export function ComplaintInboxPage() {
                 <option value="">All Statuses</option>
                 <option value="SUBMITTED">Submitted</option>
                 <option value="AI_ANALYZED">AI Analyzed</option>
+                <option value="ASSIGNED">Assigned</option>
                 <option value="IN_PROGRESS">In Progress</option>
+                <option value="WAITING_FOR_DEPARTMENT">Awaiting Dept Response</option>
+                <option value="READY_FOR_ANALYST_REVIEW">Dept Report Received</option>
+                <option value="READY_FOR_USER_RESPONSE">Ready for User Response</option>
                 <option value="RESOLVED">Resolved</option>
-                <option value="REJECTED">Closed</option>
+                <option value="ESCALATED">Escalated</option>
               </select>
 
               {/* Category Filter */}
