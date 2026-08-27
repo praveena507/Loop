@@ -278,6 +278,24 @@ export async function getStaffComplaintById(req, res) {
     );
     const response = await dbGet('SELECT * FROM responses WHERE complaintId = ?', [complaint.id]);
 
+    // Department requests & reports
+    const departmentRequests = await dbAll(
+      `SELECT dr.*, su.name as requestedByName, rep.id as reportId, rep.investigationResult, rep.evidence, rep.finding, rep.actionTaken, rep.recommendation, rep.supportingDocs, rep.submittedAt
+       FROM department_requests dr
+       LEFT JOIN staff_users su ON dr.requestedBy = su.id
+       LEFT JOIN department_reports rep ON dr.id = rep.requestId
+       WHERE dr.complaintId = ?
+       ORDER BY dr.createdAt DESC`,
+      [complaint.id]
+    );
+
+    const feedback = await dbGet('SELECT * FROM complaint_feedback WHERE complaintId = ?', [complaint.id]);
+
+    const statusHistory = await dbAll(
+      'SELECT status, createdAt FROM complaint_status_history WHERE complaintId = ? ORDER BY createdAt ASC',
+      [complaint.id]
+    );
+
     return res.json({
       success: true,
       complaint: {
@@ -287,7 +305,11 @@ export async function getStaffComplaintById(req, res) {
       },
       aiAnalysis,
       actions,
-      response
+      response,
+      departmentRequests,
+      departmentReport: departmentRequests.length > 0 ? departmentRequests[0] : null,
+      feedback,
+      statusHistory: statusHistory.length > 0 ? statusHistory : [{ status: complaint.status, createdAt: complaint.createdAt }]
     });
 
   } catch (err) {
@@ -355,10 +377,240 @@ export async function recordComplaintAction(req, res) {
   }
 }
 
+// Analyst: Send formal proof/information request to concerned department
+export async function createDepartmentRequest(req, res) {
+  try {
+    const { id } = req.params;
+    const { departmentName, departmentId, requiredInformation, reason, priority, deadline } = req.body;
+    const analystId = req.user ? req.user.id : 'ANALYST';
+
+    if (!departmentName || !requiredInformation || !reason) {
+      return res.status(400).json({ success: false, error: 'Department name, required information, and reason are required.' });
+    }
+
+    const complaint = await dbGet('SELECT * FROM complaints WHERE id = ? OR complaintNumber = ?', [id, id]);
+    if (!complaint) {
+      return res.status(404).json({ success: false, error: 'Complaint not found.' });
+    }
+
+    const now = new Date().toISOString();
+    const reqId = `dreq_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+    const requestData = {
+      id: reqId,
+      complaintId: complaint.id,
+      departmentId: departmentId || null,
+      departmentName: departmentName.trim(),
+      requestedBy: analystId,
+      priority: priority || 'P2',
+      requiredInformation: requiredInformation.trim(),
+      reason: reason.trim(),
+      deadline: deadline || null,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await dbRun(
+      `INSERT INTO department_requests (id, complaintId, departmentId, departmentName, requestedBy, priority, requiredInformation, reason, deadline, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        requestData.id,
+        requestData.complaintId,
+        requestData.departmentId,
+        requestData.departmentName,
+        requestData.requestedBy,
+        requestData.priority,
+        requestData.requiredInformation,
+        requestData.reason,
+        requestData.deadline,
+        requestData.status,
+        now,
+        now
+      ]
+    );
+
+    // Sync to Supabase
+    await supabaseQuery.insertDepartmentRequest(requestData);
+
+    // Update complaint status to WAITING_FOR_DEPARTMENT
+    await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', ['WAITING_FOR_DEPARTMENT', now, complaint.id]);
+    await supabaseQuery.updateComplaintStatus(complaint.id, 'WAITING_FOR_DEPARTMENT');
+
+    // Record action log
+    const actionId = `act_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    await dbRun(
+      'INSERT INTO complaint_actions (id, complaintId, analystId, action, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      [actionId, complaint.id, analystId, 'SENT_TO_DEPARTMENT', `Routed case to ${departmentName} department for proof/investigation. Priority: ${priority || 'P2'}.`, now]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Request successfully routed to ${departmentName} department. Complaint status set to WAITING_FOR_DEPARTMENT.`,
+      request: requestData
+    });
+
+  } catch (err) {
+    console.error('Create department request error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to create department request.' });
+  }
+}
+
+// Department: Submit investigation report
+export async function submitDepartmentReport(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { investigationResult, evidence, finding, actionTaken, recommendation, supportingDocs } = req.body;
+
+    if (!investigationResult || !finding || !actionTaken || !recommendation) {
+      return res.status(400).json({ success: false, error: 'Investigation result, finding, action taken, and recommendation are required.' });
+    }
+
+    const deptReq = await dbGet('SELECT * FROM department_requests WHERE id = ?', [requestId]);
+    if (!deptReq) {
+      return res.status(404).json({ success: false, error: 'Department request not found.' });
+    }
+
+    const now = new Date().toISOString();
+    const repId = `drep_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+    const reportData = {
+      id: repId,
+      requestId: deptReq.id,
+      complaintId: deptReq.complaintId,
+      departmentName: deptReq.departmentName,
+      investigationResult: investigationResult.trim(),
+      evidence: evidence ? evidence.trim() : 'Verified internal records.',
+      finding: finding.trim(),
+      actionTaken: actionTaken.trim(),
+      recommendation: recommendation.trim(),
+      supportingDocs: supportingDocs ? supportingDocs.trim() : '',
+      submittedAt: now,
+      createdAt: now
+    };
+
+    await dbRun(
+      `INSERT INTO department_reports (id, requestId, complaintId, departmentName, investigationResult, evidence, finding, actionTaken, recommendation, supportingDocs, submittedAt, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        reportData.id,
+        reportData.requestId,
+        reportData.complaintId,
+        reportData.departmentName,
+        reportData.investigationResult,
+        reportData.evidence,
+        reportData.finding,
+        reportData.actionTaken,
+        reportData.recommendation,
+        reportData.supportingDocs,
+        now,
+        now
+      ]
+    );
+
+    // Update request status to REPORT_SUBMITTED
+    await dbRun('UPDATE department_requests SET status = ?, updatedAt = ? WHERE id = ?', ['REPORT_SUBMITTED', now, deptReq.id]);
+    await supabaseQuery.updateDepartmentRequestStatus(deptReq.id, 'REPORT_SUBMITTED');
+
+    // Update complaint status to READY_FOR_ANALYST_REVIEW
+    await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', ['READY_FOR_ANALYST_REVIEW', now, deptReq.complaintId]);
+    await supabaseQuery.updateComplaintStatus(deptReq.complaintId, 'READY_FOR_ANALYST_REVIEW');
+
+    // Create action log
+    const actionId = `act_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    await dbRun(
+      'INSERT INTO complaint_actions (id, complaintId, analystId, action, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      [actionId, deptReq.complaintId, null, 'DEPARTMENT_REPORT_SUBMITTED', `Investigation report submitted by ${deptReq.departmentName} department.`, now]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Department investigation report submitted successfully. Case moved to READY_FOR_ANALYST_REVIEW.',
+      report: reportData
+    });
+
+  } catch (err) {
+    console.error('Submit department report error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to submit department report.' });
+  }
+}
+
+// Analyst: Review & decide on Department Report (ACCEPT_FINDINGS or REQUEST_MORE_INFO)
+export async function reviewDepartmentReport(req, res) {
+  try {
+    const { id } = req.params;
+    const { decision, additionalInformationRequired, notes } = req.body;
+    const analystId = req.user ? req.user.id : null;
+
+    const complaint = await dbGet('SELECT * FROM complaints WHERE id = ? OR complaintNumber = ?', [id, id]);
+    if (!complaint) {
+      return res.status(404).json({ success: false, error: 'Complaint not found.' });
+    }
+
+    const deptReq = await dbGet('SELECT * FROM department_requests WHERE complaintId = ? ORDER BY createdAt DESC LIMIT 1', [complaint.id]);
+    if (!deptReq) {
+      return res.status(400).json({ success: false, error: 'No department request exists for this complaint.' });
+    }
+
+    const now = new Date().toISOString();
+
+    if (decision === 'ACCEPT') {
+      await dbRun('UPDATE department_requests SET status = ?, updatedAt = ? WHERE id = ?', ['COMPLETED', now, deptReq.id]);
+      await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', ['READY_FOR_USER_RESPONSE', now, complaint.id]);
+      await supabaseQuery.updateComplaintStatus(complaint.id, 'READY_FOR_USER_RESPONSE');
+
+      const actionId = `act_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      await dbRun(
+        'INSERT INTO complaint_actions (id, complaintId, analystId, action, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [actionId, complaint.id, analystId, 'ANALYST_ACCEPTED_DEPARTMENT_REPORT', notes || 'Analyst accepted department investigation findings and confirmed resolution readiness.', now]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Department report accepted. Case is ready for final response to user.',
+        status: 'READY_FOR_USER_RESPONSE'
+      });
+
+    } else if (decision === 'REQUEST_MORE_INFO') {
+      if (!additionalInformationRequired) {
+        return res.status(400).json({ success: false, error: 'Details on additional information required are mandatory.' });
+      }
+
+      await dbRun('UPDATE department_requests SET status = ?, requiredInformation = ?, updatedAt = ? WHERE id = ?', [
+        'MORE_INFO_REQUESTED',
+        `${deptReq.requiredInformation}\n\n[ADDITIONAL REQUEST]: ${additionalInformationRequired.trim()}`,
+        now,
+        deptReq.id
+      ]);
+
+      await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', ['WAITING_FOR_DEPARTMENT', now, complaint.id]);
+      await supabaseQuery.updateComplaintStatus(complaint.id, 'WAITING_FOR_DEPARTMENT');
+
+      const actionId = `act_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      await dbRun(
+        'INSERT INTO complaint_actions (id, complaintId, analystId, action, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [actionId, complaint.id, analystId, 'REQUESTED_MORE_DEPARTMENT_INFO', `Additional info requested: ${additionalInformationRequired.trim()}`, now]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Additional information request dispatched to department. Case status reverted to WAITING_FOR_DEPARTMENT.',
+        status: 'WAITING_FOR_DEPARTMENT'
+      });
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid decision type. Expected ACCEPT or REQUEST_MORE_INFO.' });
+    }
+
+  } catch (err) {
+    console.error('Review department report error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to review department report.' });
+  }
+}
+
 export async function resolveComplaintAndRespond(req, res) {
   try {
     const { id } = req.params;
-    const { responseText, notes } = req.body;
+    const { responseText, notes, confirmNoDeptRequired } = req.body;
     const analystId = req.user ? req.user.id : null;
 
     if (!responseText || !responseText.trim()) {
@@ -368,6 +620,20 @@ export async function resolveComplaintAndRespond(req, res) {
     const complaint = await dbGet('SELECT * FROM complaints WHERE id = ? OR complaintNumber = ?', [id, id]);
     if (!complaint) {
       return res.status(404).json({ success: false, error: 'Complaint not found.' });
+    }
+
+    // MANDATORY INVESTIGATION GATEKEEPER CHECK:
+    // Check if there is an active department request that has NOT been completed
+    const pendingDeptReq = await dbGet(
+      'SELECT * FROM department_requests WHERE complaintId = ? AND status != ? ORDER BY createdAt DESC LIMIT 1',
+      [complaint.id, 'COMPLETED']
+    );
+
+    if (pendingDeptReq && !confirmNoDeptRequired) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot resolve complaint: Department investigation for '${pendingDeptReq.departmentName}' is currently '${pendingDeptReq.status}'. The Analyst must receive, review, and accept the formal department report before completing resolution.`
+      });
     }
 
     const now = new Date().toISOString();
@@ -407,6 +673,11 @@ export async function resolveComplaintAndRespond(req, res) {
     await dbRun('UPDATE complaints SET status = ?, updatedAt = ? WHERE id = ?', ['RESOLVED', now, complaint.id]);
     await supabaseQuery.updateComplaintStatus(complaint.id, 'RESOLVED');
 
+    // If there was a pending request, mark it completed now
+    if (pendingDeptReq) {
+      await dbRun('UPDATE department_requests SET status = ?, updatedAt = ? WHERE id = ?', ['COMPLETED', now, pendingDeptReq.id]);
+    }
+
     // 3. Save Action in complaint_actions & analyst_actions
     const actionId = `act_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const actionData = {
@@ -414,12 +685,12 @@ export async function resolveComplaintAndRespond(req, res) {
       complaintId: complaint.id,
       analystId,
       action: 'RESOLVED_AND_DISPATCHED',
-      notes: notes || 'Final response sent to customer via email.',
+      notes: notes || 'Final response confirmed and dispatched to customer email.',
       createdAt: now
     };
     await dbRun(
       'INSERT INTO complaint_actions (id, complaintId, analystId, action, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-      [actionData.id, actionData.complaintId, actionData.analystId, actionData.action, actionData.notes, now]
+      [actionId, complaint.id, analystId, actionData.action, actionData.notes, now]
     );
     await supabaseQuery.insertAnalystAction(actionData);
 
@@ -442,3 +713,4 @@ export async function resolveComplaintAndRespond(req, res) {
     return res.status(500).json({ success: false, error: 'Failed to resolve complaint.' });
   }
 }
+

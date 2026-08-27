@@ -16,6 +16,8 @@ import { ComplaintInboxPage } from './admin-analyst/pages/ComplaintInboxPage';
 import { ComplaintDetailPage } from './admin-analyst/pages/ComplaintDetailPage';
 import { StaffAnalyticsPage } from './admin-analyst/pages/StaffAnalyticsPage';
 import { StaffReportsPage, StaffNotificationsPage, StaffProfilePage } from './admin-analyst/pages/StaffReportsPage';
+import { DepartmentCoordinationPage } from './admin-analyst/pages/DepartmentCoordinationPage';
+import { FeedbackInsightsPage } from './admin-analyst/pages/FeedbackInsightsPage';
 
 // Admin Pages
 import { UserManagementPage } from './admin-analyst/pages/UserManagementPage';
@@ -64,12 +66,15 @@ export default function App() {
           <Route path="/staff/dashboard" element={<StaffProtectedRoute><StaffDashboardPage /></StaffProtectedRoute>} />
           <Route path="/staff/complaints" element={<StaffProtectedRoute><ComplaintInboxPage /></StaffProtectedRoute>} />
           <Route path="/staff/complaints/:id" element={<StaffProtectedRoute><ComplaintDetailPage /></StaffProtectedRoute>} />
+          <Route path="/staff/departments" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
+          <Route path="/staff/department-queue" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
           <Route path="/staff/analytics" element={<StaffProtectedRoute><StaffAnalyticsPage /></StaffProtectedRoute>} />
           <Route path="/staff/reports" element={<StaffProtectedRoute><StaffReportsPage /></StaffProtectedRoute>} />
           <Route path="/staff/notifications" element={<StaffProtectedRoute><StaffNotificationsPage /></StaffProtectedRoute>} />
           <Route path="/staff/profile" element={<StaffProtectedRoute><StaffProfilePage /></StaffProtectedRoute>} />
 
           {/* PORTAL 2: ADMIN PROTECTED ROUTES */}
+          <Route path="/staff/admin/feedback" element={<AdminProtectedRoute><FeedbackInsightsPage /></AdminProtectedRoute>} />
           <Route path="/staff/admin/users" element={<AdminProtectedRoute><UserManagementPage /></AdminProtectedRoute>} />
           <Route path="/staff/admin/settings" element={<AdminProtectedRoute><SettingsPage /></AdminProtectedRoute>} />
           <Route path="/staff/admin/audit-logs" element={<AdminProtectedRoute><AuditLogsPage /></AdminProtectedRoute>} />

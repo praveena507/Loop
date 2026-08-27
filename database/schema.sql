@@ -151,3 +151,62 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   ipAddress TEXT,
   createdAt TEXT NOT NULL
 );
+
+-- 13. DEPARTMENTS TABLE
+CREATE TABLE IF NOT EXISTS departments (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL UNIQUE,
+  description TEXT,
+  status TEXT DEFAULT 'ACTIVE',
+  createdAt TEXT NOT NULL
+);
+
+-- 14. DEPARTMENT REQUESTS TABLE
+CREATE TABLE IF NOT EXISTS department_requests (
+  id TEXT PRIMARY KEY,
+  complaintId TEXT NOT NULL,
+  departmentId TEXT,
+  departmentName TEXT NOT NULL,
+  requestedBy TEXT NOT NULL,
+  priority TEXT CHECK(priority IN ('P1', 'P2', 'P3', 'P4')) DEFAULT 'P2',
+  requiredInformation TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  deadline TEXT,
+  status TEXT CHECK(status IN ('PENDING', 'UNDER_INVESTIGATION', 'REPORT_SUBMITTED', 'MORE_INFO_REQUESTED', 'COMPLETED')) DEFAULT 'PENDING',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (complaintId) REFERENCES complaints(id) ON DELETE CASCADE
+);
+
+-- 15. DEPARTMENT REPORTS TABLE
+CREATE TABLE IF NOT EXISTS department_reports (
+  id TEXT PRIMARY KEY,
+  requestId TEXT NOT NULL UNIQUE,
+  complaintId TEXT NOT NULL,
+  departmentName TEXT NOT NULL,
+  investigationResult TEXT NOT NULL,
+  evidence TEXT NOT NULL,
+  finding TEXT NOT NULL,
+  actionTaken TEXT NOT NULL,
+  recommendation TEXT NOT NULL,
+  supportingDocs TEXT,
+  submittedAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  FOREIGN KEY (requestId) REFERENCES department_requests(id) ON DELETE CASCADE,
+  FOREIGN KEY (complaintId) REFERENCES complaints(id) ON DELETE CASCADE
+);
+
+-- 16. COMPLAINT FEEDBACK TABLE
+CREATE TABLE IF NOT EXISTS complaint_feedback (
+  id TEXT PRIMARY KEY,
+  complaintId TEXT NOT NULL UNIQUE,
+  complaintNumber TEXT NOT NULL,
+  userEmail TEXT NOT NULL,
+  rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+  resolvedSatisfaction TEXT CHECK(resolvedSatisfaction IN ('Yes', 'Partially', 'No')) NOT NULL,
+  feedbackText TEXT,
+  createdAt TEXT NOT NULL,
+  FOREIGN KEY (complaintId) REFERENCES complaints(id) ON DELETE CASCADE
+);
+

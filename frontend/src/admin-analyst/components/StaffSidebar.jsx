@@ -11,7 +11,9 @@ import {
   Settings,
   ShieldAlert,
   LogOut,
-  Cpu
+  Cpu,
+  Building2,
+  MessageSquareHeart
 } from 'lucide-react';
 import { useAuth } from '../../shared/context/AuthContext';
 
@@ -57,6 +59,10 @@ export function StaffSidebar() {
               <Inbox className="w-4 h-4" />
               <span>Complaints Inbox</span>
             </NavLink>
+            <NavLink to="/staff/departments" className={navItemClass}>
+              <Building2 className="w-4 h-4" />
+              <span>Department Coordination</span>
+            </NavLink>
             <NavLink to="/staff/analytics" className={navItemClass}>
               <BarChart3 className="w-4 h-4" />
               <span>Analytics</span>
@@ -87,6 +93,10 @@ export function StaffSidebar() {
           <div className="pt-4 border-t border-slate-800">
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-rose-400 mb-2">Administration</p>
             <nav className="space-y-1">
+              <NavLink to="/staff/admin/feedback" className={navItemClass}>
+                <MessageSquareHeart className="w-4 h-4" />
+                <span>Feedback & Quality</span>
+              </NavLink>
               <NavLink to="/staff/admin/users" className={navItemClass}>
                 <Users className="w-4 h-4" />
                 <span>User Management</span>

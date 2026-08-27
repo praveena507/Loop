@@ -140,6 +140,56 @@ export function StaffDashboardPage() {
             </div>
           )}
 
+          {/* Analyst Workflow Navigation Sections */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 custom-shadow space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Analyst Case Coordination Navigation</h3>
+              <span className="text-2xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Active Workflow</span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 text-xs">
+              <Link to="/staff/complaints?assignedToMe=true" className="bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-slate-900 group-hover:text-blue-600">MY CASES</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Assigned to Me</div>
+              </Link>
+
+              <Link to="/staff/departments" className="bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-slate-900 group-hover:text-blue-600">DEPARTMENTS</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Coordination</div>
+              </Link>
+
+              <Link to="/staff/complaints?status=WAITING_FOR_DEPARTMENT" className="bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-amber-700">PENDING DEPT</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Awaiting Report</div>
+              </Link>
+
+              <Link to="/staff/complaints?status=IN_PROGRESS" className="bg-slate-50 hover:bg-sky-50 hover:border-sky-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-sky-700">INVESTIGATION</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Under Review</div>
+              </Link>
+
+              <Link to="/staff/complaints?status=READY_FOR_USER_RESPONSE" className="bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-indigo-700">READY RESPONSE</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Analyst Approved</div>
+              </Link>
+
+              <Link to="/staff/complaints?status=RESOLVED" className="bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-emerald-700">RESOLVED</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Dispatched</div>
+              </Link>
+
+              <Link to="/staff/complaints?status=ESCALATED" className="bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-rose-700">ESCALATED</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Admin Review</div>
+              </Link>
+
+              <Link to="/staff/admin/feedback" className="bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 p-2.5 rounded-xl transition-all text-center group">
+                <div className="font-extrabold text-purple-700">FEEDBACK</div>
+                <div className="text-3xs text-slate-500 mt-0.5">Quality Insights</div>
+              </Link>
+            </div>
+          </div>
+
           {/* KPI Metrics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             <Link

@@ -246,6 +246,11 @@ export function TrackComplaintPage() {
                 </div>
               )}
 
+              {/* User Feedback Form (If Resolved) */}
+              {trackingResult.status === 'RESOLVED' && (
+                <UserFeedbackForm complaintNumber={trackingResult.complaintNumber} email={email} />
+              )}
+
             </div>
           )}
 
@@ -256,3 +261,128 @@ export function TrackComplaintPage() {
     </div>
   );
 }
+
+function UserFeedbackForm({ complaintNumber, email }) {
+  const [rating, setRating] = useState(5);
+  const [resolvedSatisfaction, setResolvedSatisfaction] = useState('Yes');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const res = await fetch('/api/feedback/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          complaintNumber,
+          rating,
+          resolvedSatisfaction,
+          feedbackText
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setErr(data.error || 'Failed to submit feedback.');
+      }
+    } catch (e) {
+      setErr('Error submitting feedback. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
+        <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+        <h4 className="text-base font-bold text-emerald-900">Thank You for Your Feedback!</h4>
+        <p className="text-xs text-emerald-700">Your rating and feedback have been recorded to help improve our organizational complaint handling.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6 space-y-4">
+      <div className="border-b border-slate-100 pb-3">
+        <h4 className="text-base font-bold text-slate-900">How Was Your Complaint Handled?</h4>
+        <p className="text-xs text-slate-500">Please take a moment to evaluate your resolution experience.</p>
+      </div>
+
+      {err && (
+        <div className="p-3 bg-rose-50 text-rose-700 text-xs font-semibold rounded-xl border border-rose-200">
+          {err}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmitFeedback} className="space-y-4 text-xs">
+        <div>
+          <label className="font-bold text-slate-700 block mb-2">Overall Satisfaction Rating (1 to 5 Stars)</label>
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                type="button"
+                key={star}
+                onClick={() => setRating(star)}
+                className={`text-2xl transition-transform hover:scale-110 ${
+                  star <= rating ? 'text-amber-400' : 'text-slate-300'
+                }`}
+              >
+                ★
+              </button>
+            ))}
+            <span className="font-extrabold text-slate-800 text-sm ml-2">{rating} / 5 Stars</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="font-bold text-slate-700 block mb-2">Was your issue resolved?</label>
+          <div className="flex items-center space-x-3">
+            {['Yes', 'Partially', 'No'].map((opt) => (
+              <label key={opt} className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
+                resolvedSatisfaction === opt ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}>
+                <input
+                  type="radio"
+                  name="resolvedSatisfaction"
+                  value={opt}
+                  checked={resolvedSatisfaction === opt}
+                  onChange={() => setResolvedSatisfaction(opt)}
+                  className="hidden"
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="font-bold text-slate-700 block mb-1">Additional Feedback (Optional)</label>
+          <textarea
+            rows={3}
+            placeholder="Tell us what worked well or what we can improve..."
+            value={feedbackText}
+            onChange={(e) => setFeedbackText(e.target.value)}
+            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+        >
+          <span>{submitting ? 'Submitting Feedback...' : 'Submit Feedback'}</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  );
+}
+

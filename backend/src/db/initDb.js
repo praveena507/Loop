@@ -111,6 +111,30 @@ export const supabaseQuery = {
     try {
       await supabase.from('audit_logs').insert([data]);
     } catch (e) {}
+  },
+
+  async insertDepartmentRequest(data) {
+    try {
+      await supabase.from('department_requests').insert([data]);
+    } catch (e) {}
+  },
+
+  async updateDepartmentRequestStatus(id, status) {
+    try {
+      await supabase.from('department_requests').update({ status, updatedAt: new Date().toISOString() }).eq('id', id);
+    } catch (e) {}
+  },
+
+  async insertDepartmentReport(data) {
+    try {
+      await supabase.from('department_reports').insert([data]);
+    } catch (e) {}
+  },
+
+  async insertFeedback(data) {
+    try {
+      await supabase.from('complaint_feedback').insert([data]);
+    } catch (e) {}
   }
 };
 
@@ -284,14 +308,106 @@ export async function initDatabase() {
             ipAddress TEXT,
             createdAt TEXT NOT NULL
           );
-        `, (err) => {
+        `);
+
+        // 12. DEPARTMENTS
+        db.run(`
+          CREATE TABLE IF NOT EXISTS departments (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            code TEXT NOT NULL UNIQUE,
+            description TEXT,
+            status TEXT DEFAULT 'ACTIVE',
+            createdAt TEXT NOT NULL
+          );
+        `);
+
+        // 13. DEPARTMENT_REQUESTS
+        db.run(`
+          CREATE TABLE IF NOT EXISTS department_requests (
+            id TEXT PRIMARY KEY,
+            complaintId TEXT NOT NULL,
+            departmentId TEXT,
+            departmentName TEXT NOT NULL,
+            requestedBy TEXT NOT NULL,
+            priority TEXT DEFAULT 'P2',
+            requiredInformation TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            deadline TEXT,
+            status TEXT DEFAULT 'PENDING',
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL
+          );
+        `);
+
+        // 14. DEPARTMENT_REPORTS
+        db.run(`
+          CREATE TABLE IF NOT EXISTS department_reports (
+            id TEXT PRIMARY KEY,
+            requestId TEXT NOT NULL UNIQUE,
+            complaintId TEXT NOT NULL,
+            departmentName TEXT NOT NULL,
+            investigationResult TEXT NOT NULL,
+            evidence TEXT NOT NULL,
+            finding TEXT NOT NULL,
+            actionTaken TEXT NOT NULL,
+            recommendation TEXT NOT NULL,
+            supportingDocs TEXT,
+            submittedAt TEXT NOT NULL,
+            createdAt TEXT NOT NULL
+          );
+        `);
+
+        // 15. COMPLAINT_FEEDBACK
+        db.run(`
+          CREATE TABLE IF NOT EXISTS complaint_feedback (
+            id TEXT PRIMARY KEY,
+            complaintId TEXT NOT NULL UNIQUE,
+            complaintNumber TEXT NOT NULL,
+            userEmail TEXT NOT NULL,
+            rating INTEGER NOT NULL,
+            resolvedSatisfaction TEXT NOT NULL,
+            feedbackText TEXT,
+            createdAt TEXT NOT NULL
+          );
+        `, async (err) => {
           if (err) {
             console.error('Database initialization error:', err);
-            reject(err);
-          } else {
-            console.log('LOOP Supabase & Local Database initialized with status history & audit log tables.');
-            resolve();
+            return reject(err);
           }
+
+          // Seed default departments if empty
+          try {
+            const row = await dbGet('SELECT COUNT(*) as count FROM departments');
+            if (!row || row.count === 0) {
+              const defaultDepts = [
+                { id: 'dept_fin', name: 'Finance / Accounts', code: 'FIN', description: 'Billing, refunds, accounting records, and payment settlements' },
+                { id: 'dept_pay', name: 'Payments', code: 'PAY', description: 'Transaction verification, gateway reconciliations, and payment status' },
+                { id: 'dept_cs', name: 'Customer Service', code: 'CS', description: 'Customer communications, general inquiries, and frontline support' },
+                { id: 'dept_it', name: 'Technical / IT', code: 'IT', description: 'System availability, software bugs, server logs, and app errors' },
+                { id: 'dept_ops', name: 'Operations', code: 'OPS', description: 'Operational service delivery, order fulfillment, and workflow execution' },
+                { id: 'dept_hr', name: 'Human Resources', code: 'HR', description: 'Internal staff conduct, employee complaints, and workplace policies' },
+                { id: 'dept_admin', name: 'Administration', code: 'ADMIN', description: 'General administrative support and facility operations' },
+                { id: 'dept_log', name: 'Logistics', code: 'LOG', description: 'Physical shipping, dispatch tracking, and delivery logistics' },
+                { id: 'dept_sec', name: 'Security', code: 'SEC', description: 'Account security, fraud prevention, and data privacy' },
+                { id: 'dept_legal', name: 'Legal / Compliance', code: 'LEGAL', description: 'Regulatory compliance, terms of service, and legal reviews' },
+                { id: 'dept_infra', name: 'Infrastructure', code: 'INFRA', description: 'Physical and network infrastructure support' },
+                { id: 'dept_sd', name: 'Service Delivery', code: 'SD', description: 'Service activation, provision, and SLA monitoring' }
+              ];
+              const now = new Date().toISOString();
+              for (const dept of defaultDepts) {
+                await dbRun(
+                  'INSERT OR IGNORE INTO departments (id, name, code, description, status, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+                  [dept.id, dept.name, dept.code, dept.description, 'ACTIVE', now]
+                );
+              }
+            }
+          } catch (e) {
+            console.warn('Department seed notice:', e.message);
+          }
+
+          console.log('LOOP Supabase & Local Database initialized with department coordination & feedback tables.');
+          resolve();
         });
 
       } catch (err) {
@@ -301,3 +417,4 @@ export async function initDatabase() {
     });
   });
 }
+

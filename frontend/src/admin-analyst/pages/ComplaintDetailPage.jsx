@@ -23,7 +23,13 @@ import {
   ShieldCheck,
   FileCheck,
   Layers,
-  Paperclip
+  Paperclip,
+  Building2,
+  Clock,
+  ArrowRight,
+  HelpCircle,
+  MessageSquare,
+  AlertTriangle
 } from 'lucide-react';
 
 export function ComplaintDetailPage() {
@@ -42,7 +48,6 @@ export function ComplaintDetailPage() {
 
   // AI Decision State
   const [aiDecision, setAiDecision] = useState('ACCEPTED');
-  const [editingAi, setEditingAi] = useState(false);
   const [editedSuggestedResp, setEditedSuggestedResp] = useState('');
   const [showProofModal, setShowProofModal] = useState(false);
 
@@ -54,16 +59,68 @@ export function ComplaintDetailPage() {
   const [additionalFindings, setAdditionalFindings] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
 
+  // Department Coordination State
+  const [departments, setDepartments] = useState([]);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [deptForm, setDeptForm] = useState({
+    departmentName: 'Payments & Finance',
+    departmentId: '',
+    requiredInformation: '',
+    reason: '',
+    priority: 'P2',
+    deadline: ''
+  });
+  const [sendingDeptReq, setSendingDeptReq] = useState(false);
+
+  // More Info Request State
+  const [showMoreInfoModal, setShowMoreInfoModal] = useState(false);
+  const [moreInfoText, setMoreInfoText] = useState('');
+
+  // Confirmation Modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const fetchDetail = () => {
     setLoading(true);
-    api.getStaffComplaintById(id)
-      .then(res => {
-        if (res.success) {
-          setData(res);
-          setSelectedPriority(res.aiAnalysis?.priority || 'MEDIUM');
-          setSelectedStatus(res.complaint?.status || 'ASSIGNED');
-          setFinalResponse(res.response?.responseText || res.aiAnalysis?.suggestedResponse || '');
-          setEditedSuggestedResp(res.aiAnalysis?.suggestedResponse || '');
+    const token = localStorage.getItem('loop_staff_token');
+    const headers = { Authorization: `Bearer ${token}` };
+
+    Promise.all([
+      api.getStaffComplaintById(id),
+      fetch('/api/departments', { headers }).then(r => r.json()).catch(() => ({ success: false }))
+    ])
+      .then(([resComp, resDepts]) => {
+        if (resComp.success) {
+          setData(resComp);
+          setSelectedPriority(resComp.aiAnalysis?.priority || 'MEDIUM');
+          setSelectedStatus(resComp.complaint?.status || 'ASSIGNED');
+          setFinalResponse(resComp.response?.responseText || resComp.aiAnalysis?.suggestedResponse || '');
+          setEditedSuggestedResp(resComp.aiAnalysis?.suggestedResponse || '');
+
+          // Pre-populate smart proof template based on category if department form is empty
+          const category = resComp.complaint?.category || '';
+          let defaultReq = 'Verify transaction logs, payment reference, and settlement status.';
+          if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('it')) {
+            defaultReq = 'Provide system error logs, service availability incident report, and technical investigation summary.';
+          } else if (category.toLowerCase().includes('ops') || category.toLowerCase().includes('service')) {
+            defaultReq = 'Provide operational delivery log, service fulfillment record, and investigation findings.';
+          } else if (category.toLowerCase().includes('hr') || category.toLowerCase().includes('staff')) {
+            defaultReq = 'Verify internal staff conduct logs, workplace policy adherence, and supervisor report.';
+          }
+
+          setDeptForm(prev => ({
+            ...prev,
+            requiredInformation: defaultReq,
+            reason: `Complaint concerning ${resComp.complaint?.reason || category} requires department investigation.`
+          }));
+        } else {
+          setError(resComp.error || 'Failed to load complaint detail.');
+        }
+
+        if (resDepts.success && Array.isArray(resDepts.departments)) {
+          setDepartments(resDepts.departments);
+          if (resDepts.departments.length > 0) {
+            setDeptForm(prev => ({ ...prev, departmentName: resDepts.departments[0].name, departmentId: resDepts.departments[0].id }));
+          }
         }
       })
       .catch(err => setError(err.message || 'Failed to load complaint.'))
@@ -111,8 +168,74 @@ export function ComplaintDetailPage() {
     }
   };
 
-  // State for Response Confirmation Dialog Modal
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  // Submit Department Information Request
+  const handleSendDepartmentRequest = async (e) => {
+    e.preventDefault();
+    setSendingDeptReq(true);
+    setSuccessMsg(null);
+    setError(null);
+    try {
+      const token = localStorage.getItem('loop_staff_token');
+      const res = await fetch(`/api/staff/complaints/${data.complaint.id}/department-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(deptForm)
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setSuccessMsg(`Request successfully routed to ${deptForm.departmentName} department. Status set to WAITING_FOR_DEPARTMENT.`);
+        setShowDeptModal(false);
+        fetchDetail();
+      } else {
+        alert(resData.error || 'Failed to route request to department.');
+      }
+    } catch (err) {
+      alert('Error sending request to department.');
+    } finally {
+      setSendingDeptReq(false);
+    }
+  };
+
+  // Analyst Review on Department Report (Accept Findings or Request More Info)
+  const handleReviewDepartmentReport = async (decision) => {
+    if (decision === 'REQUEST_MORE_INFO' && !moreInfoText.trim()) {
+      alert('Please specify the additional information required.');
+      return;
+    }
+    setActionLoading(true);
+    setSuccessMsg(null);
+    try {
+      const token = localStorage.getItem('loop_staff_token');
+      const res = await fetch(`/api/staff/complaints/${data.complaint.id}/review-department-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          decision,
+          additionalInformationRequired: moreInfoText,
+          notes: compileCombinedNotes()
+        })
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setSuccessMsg(resData.message);
+        setShowMoreInfoModal(false);
+        setMoreInfoText('');
+        fetchDetail();
+      } else {
+        alert(resData.error || 'Failed to submit department report review.');
+      }
+    } catch (err) {
+      alert('Error reviewing department report.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const confirmAndResolve = (e) => {
     e.preventDefault();
@@ -120,6 +243,14 @@ export function ComplaintDetailPage() {
       setError('Please provide a final response text for the customer.');
       return;
     }
+
+    // Gatekeeper Check: Ensure no pending department report exists
+    const deptReq = data?.departmentReport;
+    if (deptReq && deptReq.status !== 'COMPLETED' && deptReq.status !== 'REPORT_SUBMITTED' && data?.complaint?.status === 'WAITING_FOR_DEPARTMENT') {
+      setError(`Cannot resolve complaint: A formal request to '${deptReq.departmentName}' is currently 'WAITING_FOR_DEPARTMENT'. The Analyst must wait for the department report and verify findings before resolving.`);
+      return;
+    }
+
     setShowConfirmModal(true);
   };
 
@@ -132,7 +263,8 @@ export function ComplaintDetailPage() {
     try {
       const payload = {
         responseText: finalResponse,
-        notes: compileCombinedNotes()
+        notes: compileCombinedNotes(),
+        confirmNoDeptRequired: true
       };
       const res = await api.resolveComplaint(data.complaint.id, payload);
       if (res.success) {
@@ -142,6 +274,8 @@ export function ComplaintDetailPage() {
         setAdditionalFindings('');
         setOverrideReason('');
         fetchDetail();
+      } else {
+        setError(res.error || 'Failed to resolve complaint.');
       }
     } catch (err) {
       setError(err.message || 'Failed to resolve complaint.');
@@ -155,7 +289,7 @@ export function ComplaintDetailPage() {
       <div className="flex min-h-screen bg-slate-50">
         <StaffSidebar />
         <div className="flex-1 flex items-center justify-center text-sm font-semibold text-slate-500">
-          Loading Complaint & Document Proof Workbench...
+          Loading Complaint & Department Case Coordination Workbench...
         </div>
       </div>
     );
@@ -197,7 +331,10 @@ export function ComplaintDetailPage() {
     );
   }
 
-  const { complaint, aiAnalysis, actions, response } = data;
+  const { complaint, aiAnalysis, actions, response, departmentRequests, departmentReport, feedback, statusHistory } = data;
+  const isAwaitingDepartment = complaint.status === 'WAITING_FOR_DEPARTMENT';
+  const isReadyForAnalystReview = complaint.status === 'READY_FOR_ANALYST_REVIEW';
+  const isReadyForUserResponse = complaint.status === 'READY_FOR_USER_RESPONSE';
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -205,8 +342,8 @@ export function ComplaintDetailPage() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <StaffHeader
-          title={`Complaint Detail: ${complaint.complaintNumber}`}
-          subtitle="Customer Feedback Details & Automated Document Intelligence Workbench"
+          title={`Case #${complaint.complaintNumber} — Analyst Coordination Workbench`}
+          subtitle="Enterprise Case Coordination: User ➔ Admin ➔ Analyst ➔ Department ➔ Resolution"
         />
 
         <main className="p-6 space-y-6 flex-1 max-w-7xl mx-auto w-full">
@@ -218,82 +355,105 @@ export function ComplaintDetailPage() {
             </div>
           )}
 
-          {/* Top Info Bar */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {error && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Header Case Status & Department Actions Bar */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
               <div className="flex items-center space-x-3">
                 <span className="text-2xl font-mono font-extrabold text-blue-600 tracking-wider">
                   {complaint.complaintNumber}
                 </span>
                 <StatusBadge status={complaint.status} />
+                {departmentReport && (
+                  <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 flex items-center space-x-1">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Dept: {departmentReport.departmentName}</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 font-medium mt-1">
-                Submitted on {new Date(complaint.createdAt).toLocaleString()} • Problem Section: <strong className="text-slate-800">{aiAnalysis?.sectionName || `${complaint.category} Section`}</strong>
+                Submitted on {new Date(complaint.createdAt).toLocaleString()} • Category: <strong className="text-slate-800">{complaint.category}</strong> • Place: <strong className="text-slate-800">{complaint.place}</strong>
               </p>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <span className="text-xs font-semibold text-slate-500">Analyst Priority Override:</span>
-              <select
-                value={selectedPriority}
-                onChange={(e) => setSelectedPriority(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white"
+            <div className="flex items-center space-x-3 flex-wrap gap-2">
+              <button
+                onClick={() => setShowDeptModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
               >
-                <option value="LOW">LOW</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="HIGH">HIGH</option>
-                <option value="CRITICAL">CRITICAL</option>
-              </select>
+                <Building2 className="w-4 h-4" />
+                <span>Request Department Proof</span>
+              </button>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-semibold text-slate-500">Priority:</span>
+                <select
+                  value={selectedPriority}
+                  onChange={(e) => setSelectedPriority(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white"
+                >
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* LEFT COLUMN: Customer Complaint & Proof */}
+            {/* LEFT COLUMN: Complaint Submission & Department Investigation Report */}
             <div className="space-y-6">
               
-              {/* Original Customer Complaint Box */}
+              {/* Original Customer Complaint */}
               <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6 space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-slate-900 flex items-center">
                     <User className="w-4 h-4 text-blue-600 mr-2" />
-                    Customer Submission
+                    Customer Complaint Details
                   </h3>
                   <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    Email Verified ✓
+                    Verified Complainant ✓
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <span className="text-slate-400 font-medium block">Customer Name</span>
+                    <span className="text-slate-400 font-medium block">Complainant Name</span>
                     <span className="font-bold text-slate-800">{complaint.name}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block">Customer Email</span>
+                    <span className="text-slate-400 font-medium block">Complainant Email</span>
                     <span className="font-bold text-slate-800">{complaint.email}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block">Location / Place</span>
+                    <span className="text-slate-400 font-medium block">Location / Branch</span>
                     <span className="font-bold text-slate-800">{complaint.place}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block">Section / Category</span>
+                    <span className="text-slate-400 font-medium block">Category</span>
                     <span className="font-bold text-slate-800">{complaint.category}</span>
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <span className="text-xs font-bold text-slate-700 block mb-1">Reason / Title:</span>
+                  <span className="text-xs font-bold text-slate-700 block mb-1">Reason:</span>
                   <p className="text-sm font-bold text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100">
                     {complaint.reason}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-xs font-bold text-slate-700 block mb-1">Full Detailed Context:</span>
+                  <span className="text-xs font-bold text-slate-700 block mb-1">Detailed Description:</span>
                   <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
-                    {complaint.description || 'No additional details provided.'}
+                    {complaint.description || 'No additional text provided.'}
                   </p>
                 </div>
 
@@ -301,7 +461,7 @@ export function ComplaintDetailPage() {
                   <div className="pt-2">
                     <span className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center">
                       <Paperclip className="w-4 h-4 text-blue-600 mr-1" />
-                      Attached Customer Proof Document / Image:
+                      Attached Customer Proof Document:
                     </span>
                     {complaint.attachmentUrl.startsWith('data:image/') ? (
                       <img
@@ -324,94 +484,116 @@ export function ComplaintDetailPage() {
                 )}
               </div>
 
-              {/* AUTOMATED DOCUMENT PROOF INTELLIGENCE CARD */}
-              {aiAnalysis && (
-                <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              {/* DEPARTMENT INVESTIGATION REPORT CARD */}
+              {departmentReport && (
+                <div className="bg-white rounded-2xl border-2 border-indigo-200 custom-shadow p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-indigo-100">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center">
-                      <FileCheck className="w-4 h-4 text-emerald-600 mr-2" />
-                      Automated Document Proof Analysis
+                      <Building2 className="w-4 h-4 text-indigo-600 mr-2" />
+                      Department Investigation Report ({departmentReport.departmentName})
                     </h3>
-                    <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                      {aiAnalysis.proofMatch || 'Proof Match Verified ✓'}
+                    <span className={`text-2xs font-extrabold uppercase px-2.5 py-1 rounded-full ${
+                      departmentReport.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                      departmentReport.status === 'REPORT_SUBMITTED' ? 'bg-indigo-100 text-indigo-800 border border-indigo-300' :
+                      'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {departmentReport.status === 'REPORT_SUBMITTED' ? 'Report Submitted — Pending Review' : departmentReport.status}
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-900 flex items-center">
-                        <Sparkles className="w-4 h-4 text-emerald-600 mr-1.5" />
-                        AI Proof OCR Evidence Extraction:
-                      </span>
+                  <div className="space-y-3 text-xs">
+                    <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-1">
+                      <span className="font-bold text-indigo-950 block uppercase tracking-wider text-3xs">1. Investigation Result:</span>
+                      <p className="text-slate-800 font-medium leading-relaxed">{departmentReport.investigationResult}</p>
                     </div>
-                    <p className="text-slate-800 leading-relaxed font-medium">
-                      {aiAnalysis.attachmentSummary || 'Document proof verified by Automated OCR.'}
-                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="font-bold text-slate-600 block uppercase text-3xs mb-0.5">2. Verified Evidence:</span>
+                        <p className="text-slate-800 font-medium">{departmentReport.evidence || 'Verified internal logs.'}</p>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="font-bold text-slate-600 block uppercase text-3xs mb-0.5">3. Root Finding:</span>
+                        <p className="text-slate-800 font-medium">{departmentReport.finding}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="font-bold text-slate-600 block uppercase text-3xs">4. Corrective Action Taken:</span>
+                      <p className="text-slate-800 font-medium">{departmentReport.actionTaken}</p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="font-bold text-slate-600 block uppercase text-3xs">5. Department Recommendation:</span>
+                      <p className="text-slate-800 font-medium">{departmentReport.recommendation}</p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-xs pt-1">
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 font-medium block text-2xs uppercase tracking-wider">Assigned Section</span>
-                      <span className="font-bold text-slate-800">{aiAnalysis.sectionName || `${complaint.category} Section`}</span>
-                    </div>
+                  {/* Analyst Review Controls for Department Report */}
+                  <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-2xs font-bold text-slate-500">Analyst Report Assessment:</span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleReviewDepartmentReport('ACCEPT')}
+                        disabled={actionLoading || departmentReport.status === 'COMPLETED'}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-2xs rounded-xl shadow-xs transition-colors flex items-center space-x-1 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Accept Findings</span>
+                      </button>
 
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 font-medium block text-2xs uppercase tracking-wider">Identified Root Cause</span>
-                      <span className="font-bold text-rose-700">{aiAnalysis.rootCause || 'Operational Glitch'}</span>
+                      <button
+                        onClick={() => setShowMoreInfoModal(true)}
+                        disabled={actionLoading}
+                        className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-2xs rounded-xl shadow-xs transition-colors flex items-center space-x-1 disabled:opacity-50"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>Request More Info</span>
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Action History Trail */}
-              <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6">
-                <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
-                  <History className="w-4 h-4 text-slate-600 mr-2" />
-                  Staff Audit & Action History
+              {/* Real-time Case Lifecycle Timeline */}
+              <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6 space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center">
+                  <History className="w-4 h-4 text-blue-600 mr-2" />
+                  Real-Time Case Lifecycle Timeline
                 </h3>
 
-                <div className="space-y-3 max-h-56 overflow-y-auto">
-                  {actions.length === 0 ? (
-                    <p className="text-xs text-slate-400">No actions recorded yet.</p>
-                  ) : (
-                    actions.map(act => (
-                      <div key={act.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                        <div className="flex justify-between items-center font-bold text-slate-800 mb-1">
-                          <span>{act.action}</span>
-                          <span className="text-2xs text-slate-400">{new Date(act.createdAt).toLocaleString()}</span>
-                        </div>
-                        {act.notes && <p className="text-slate-600 italic mt-1">{act.notes}</p>}
-                        <span className="text-2xs text-blue-600 font-semibold mt-1 block">By: {act.analystName || 'Analyst'}</span>
+                <div className="relative pl-6 space-y-4 text-xs before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {statusHistory.map((step, idx) => (
+                    <div key={idx} className="relative flex items-start space-x-3">
+                      <span className="absolute -left-6 top-0.5 w-3.5 h-3.5 rounded-full bg-blue-600 border-2 border-white ring-2 ring-blue-100"></span>
+                      <div>
+                        <div className="font-bold text-slate-800">{step.status.replace(/_/g, ' ')}</div>
+                        <div className="text-2xs text-slate-400">{new Date(step.createdAt).toLocaleString()}</div>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
             </div>
 
-            {/* RIGHT COLUMN: AI Analysis & Analyst Action Form */}
+            {/* RIGHT COLUMN: AI Analysis, Final Review & User Response Form */}
             <div className="space-y-6">
               
-              {/* CORPORATE AI TRIAGE WORKBENCH CARD */}
+              {/* GEMINI AI TRIAGE ANALYSIS */}
               <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-xl space-y-5 border border-slate-800">
                 <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
                   <div className="flex items-center space-x-2">
                     <Sparkles className="w-5 h-5 text-blue-400" />
-                    <h3 className="text-base font-extrabold tracking-tight">AI Operational Triage Recommendation</h3>
+                    <h3 className="text-base font-extrabold tracking-tight">AI Operational Triage</h3>
                   </div>
                   <span className="text-2xs font-bold bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full border border-blue-400/30">
-                    AI Confidence: {aiAnalysis?.confidence || 'High'}
+                    AI Priority: {aiAnalysis?.priority || 'P2'}
                   </span>
                 </div>
 
-                {/* AI Key Indicators Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Recommended Priority</span>
-                    <PriorityBadge priority={aiAnalysis?.priority || 'MEDIUM'} />
-                  </div>
-
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                     <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Severity & Urgency</span>
                     <span className="font-bold text-slate-200 block truncate">{aiAnalysis?.severity || 'Significant'} • {aiAnalysis?.urgency || 'Standard'}</span>
@@ -419,226 +601,83 @@ export function ComplaintDetailPage() {
 
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                     <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Impact Scope</span>
-                    <span className="font-bold text-amber-300 block truncate">{aiAnalysis?.affectedScope || 'Single User'}</span>
+                    <span className="font-bold text-amber-300 block truncate">{aiAnalysis?.affectedScope || 'Single Complainant'}</span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Customer Sentiment</span>
+                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Suggested Dept</span>
+                    <span className="font-bold text-blue-300 block truncate">{deptForm.departmentName}</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <span className="text-slate-400 text-2xs uppercase tracking-wider block mb-1">Sentiment Score</span>
                     <SentimentBadge sentiment={aiAnalysis?.sentiment} score={aiAnalysis?.sentimentScore} />
                   </div>
                 </div>
 
-                {/* AI Executive Summary */}
                 <div className="space-y-1.5">
-                  <span className="text-2xs uppercase font-bold text-slate-400 tracking-wider">AI Fact-Based Summary</span>
+                  <span className="text-2xs uppercase font-bold text-slate-400 tracking-wider">AI Executive Summary</span>
                   <p className="text-xs text-slate-200 leading-relaxed bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
-                    {aiAnalysis?.summary || 'Complaint logged and awaiting human review.'}
+                    {aiAnalysis?.summary || 'Complaint analyzed and queued for analyst routing.'}
                   </p>
                 </div>
-
-                {/* AI Key Factors / Evidence Bullets */}
-                {aiAnalysis?.keyFactors && (
-                  <div className="space-y-1.5">
-                    <span className="text-2xs uppercase font-bold text-slate-400 tracking-wider">Primary Operational Factors</span>
-                    <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700 space-y-1 text-xs">
-                      {(typeof aiAnalysis.keyFactors === 'string' ? JSON.parse(aiAnalysis.keyFactors) : aiAnalysis.keyFactors).map((factor, idx) => (
-                        <div key={idx} className="flex items-center text-slate-300 text-2xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2 shrink-0"></span>
-                          <span>{factor}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Human-In-The-Loop Disclaimer */}
-                <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-2xs text-slate-400">
-                  <span className="italic">AI Note: Operational recommendation only. Human owner decision is final.</span>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setAiDecision('ACCEPTED')}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        aiDecision === 'ACCEPTED' ? 'bg-emerald-500 text-white shadow-xs' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                    >
-                      ✓ Accept Recommendation
-                    </button>
-                  </div>
-                </div>
-
               </div>
 
-              {/* ANALYST DECISION & FINAL RESPONSE FORM */}
+              {/* FINAL CASE REVIEW & USER RESPONSE DISPATCH WORKBENCH */}
               <div className="bg-white rounded-2xl border border-slate-200 custom-shadow p-6 space-y-5">
                 <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between">
                   <span className="flex items-center">
                     <Send className="w-4 h-4 text-blue-600 mr-2" />
-                    Analyst Investigation & Decision Workbench
+                    Final Case Review & User Response Dispatch
                   </span>
-                  <span className="text-2xs font-bold text-slate-400">Human Authority</span>
+                  <span className="text-2xs font-bold text-slate-400">Analyst Coordinator</span>
                 </h3>
 
-                {/* Priority Override & Decision Section */}
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Human Priority Decision</label>
-                      <select
-                        value={selectedPriority}
-                        onChange={(e) => setSelectedPriority(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20"
-                      >
-                        <option value="CRITICAL">P1 — Critical</option>
-                        <option value="HIGH">P2 — High</option>
-                        <option value="MEDIUM">P3 — Medium</option>
-                        <option value="LOW">P4 — Low</option>
-                      </select>
+                {/* Gatekeeper Banner Warning */}
+                {isAwaitingDepartment && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs space-y-1">
+                    <div className="font-bold flex items-center space-x-1.5">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span>Case Waiting for Department Investigation Report</span>
                     </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Case Status</label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20"
-                      >
-                        <option value="ASSIGNED">Assigned / Pending</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="ACTION_TAKEN">Action Taken</option>
-                        <option value="RESOLVED">Resolved</option>
-                        <option value="ESCALATED">Escalated</option>
-                      </select>
-                    </div>
+                    <p className="text-amber-800">
+                      A request was routed to <strong>{departmentReport?.departmentName || 'Concerned Department'}</strong>. Final resolution cannot be dispatched until the department submits its report and findings are accepted.
+                    </p>
                   </div>
+                )}
 
-                  {/* Override Reason Field if Analyst Priority != AI Priority */}
-                  {selectedPriority !== (aiAnalysis?.priority || 'MEDIUM') && (
-                    <div className="pt-2">
-                      <label className="block text-2xs font-bold uppercase tracking-wider text-amber-700 mb-1">
-                        Priority Override Reason (AI Recommended: {aiAnalysis?.priority || 'P3'} → Selected: {selectedPriority}) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Explain why human analyst is overriding AI recommended priority..."
-                        value={overrideReason}
-                        onChange={(e) => setOverrideReason(e.target.value)}
-                        className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl text-xs font-medium focus:bg-white text-slate-900"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Structured Investigation Fields */}
+                {/* Structured Investigation Notes */}
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center">
-                      <Lock className="w-3.5 h-3.5 text-rose-500 mr-1.5" />
-                      Investigation Notes
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Analyst Internal Coordinator Notes
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="Enter investigation steps, logs checked, or team findings..."
+                      placeholder="Record internal analyst notes, cross-department communications, or verification notes..."
                       value={analystNotes}
                       onChange={(e) => setAnalystNotes(e.target.value)}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white"
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-2xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Evidence / Verification Notes
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Receipt verified, payment gateway log checked..."
-                        value={evidenceNotes}
-                        onChange={(e) => setEvidenceNotes(e.target.value)}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-2xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Additional Findings
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Root cause confirmed, store supervisor informed..."
-                        value={additionalFindings}
-                        onChange={(e) => setAdditionalFindings(e.target.value)}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white"
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                {/* Sector-Specific Analyst Decision Presets */}
-                <div className="flex flex-wrap gap-2 pt-1 pb-1">
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block w-full">Analyst Sector Decision Controls:</span>
-                  
-                  {/* Product Sector Action */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus('ACTION_TAKEN');
-                      setEvidenceNotes('Product defect evidence verified via official product catalog & photo proof.');
-                      setAdditionalFindings('Initiated Manufacturer Quality Assurance ticket #QA-2026 and generated prepaid product return shipping label.');
-                      setFinalResponse(`Dear ${complaint?.name || 'Customer'},\n\nWe have reviewed your product issue regarding "${complaint?.reason || 'your product'}". We have contacted our manufacturer to perform a strict quality assurance audit.\n\nOur team has arranged a product return. A prepaid return shipping label and replacement/refund dispatch instructions have been sent to your verified email.\n\nTicket Reference: ${complaint?.complaintNumber}\n\nBest regards,\nLOOP Quality Assurance & Support Team`);
-                    }}
-                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-2xs font-bold transition-colors flex items-center cursor-pointer shadow-2xs"
-                  >
-                    📦 Product: Ask Manufacturer for QA & Arrange Return
-                  </button>
-
-                  {/* Payment Sector Action */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus('RESOLVED');
-                      setEvidenceNotes('Payment gateway transaction log & bank debit statement verified on official banking portal.');
-                      setAdditionalFindings('Authorized internal finance team to resend money correctly to customer account.');
-                      setFinalResponse(`Dear ${complaint?.name || 'Customer'},\n\nWe have verified your payment transaction through our official gateway logs. Our finance team has been authorized to resend your money correctly to your bank account.\n\nThe transaction reversal has been initiated and will credit your account in 1-2 business days.\n\nTransaction Reference: ${complaint?.complaintNumber}\n\nBest regards,\nLOOP Finance & Support Team`);
-                    }}
-                    className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-2xs font-bold transition-colors flex items-center cursor-pointer shadow-2xs"
-                  >
-                    💳 Payment: Authorize Finance Team to Resend Money
-                  </button>
-
-                  {/* Service Sector Action */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus('RESOLVED');
-                      setEvidenceNotes('Official store manager incident log & location report verified.');
-                      setAdditionalFindings('Service corrective action logged; branch management conducted operational staff audit.');
-                      setFinalResponse(`Dear ${complaint?.name || 'Customer'},\n\nThank you for bringing your service experience at ${complaint?.place || 'our location'} to our attention. Our Analyst team has investigated with official branch management.\n\nOperational corrective measures and staff quality checks have been enforced.\n\nBest regards,\nLOOP Operations Support Team`);
-                    }}
-                    className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-2xs font-bold transition-colors flex items-center cursor-pointer shadow-2xs"
-                  >
-                    🏬 Service: Escalate to Store Manager for Quality Audit
-                  </button>
-                </div>
-
-                {/* Final Customer Response Editor */}
+                {/* Final Response Text Field */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                    Final Customer Response (Will Be Emailed & Shown On Tracking Portal) *
+                    Final External Response to User (Emailed & Displayed on Public Tracker) *
                   </label>
                   <textarea
                     rows={4}
                     required
-                    placeholder="Write or customize the final official response..."
+                    placeholder="Write the formal, professional response to be dispatched to the customer..."
                     value={finalResponse}
                     onChange={(e) => setFinalResponse(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-blue-500/20"
                   />
-                  <span className="text-2xs text-slate-400 block mt-1">
-                    Display Sender Identity: <strong>LOOP Support Team</strong>
-                  </span>
                 </div>
 
-                {/* Submit Resolution Action Button */}
+                {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
                     type="button"
@@ -646,21 +685,32 @@ export function ComplaintDetailPage() {
                     disabled={actionLoading}
                     className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
                   >
-                    Save Notes Only
+                    Save Internal Notes
                   </button>
 
                   <button
                     type="button"
                     onClick={confirmAndResolve}
-                    disabled={actionLoading || !finalResponse.trim()}
+                    disabled={actionLoading || !finalResponse.trim() || (isAwaitingDepartment && !departmentReport)}
                     className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
                   >
                     <Send className="w-4 h-4" />
-                    <span>{actionLoading ? 'Dispatching...' : 'Send Response & Resolve'}</span>
+                    <span>{actionLoading ? 'Dispatching...' : 'Send Final Response to User'}</span>
                   </button>
                 </div>
-
               </div>
+
+              {/* User Feedback Card (if submitted) */}
+              {feedback && (
+                <div className="bg-emerald-950/20 border border-emerald-800/80 p-5 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-300">
+                    <span>User Satisfaction Feedback Submitted</span>
+                    <span>Rating: {feedback.rating} / 5 ⭐</span>
+                  </div>
+                  <p className="text-xs text-slate-300 italic">"{feedback.feedbackText || 'No comments provided.'}"</p>
+                  <div className="text-2xs text-slate-400">Resolved Satisfaction: <strong>{feedback.resolvedSatisfaction}</strong></div>
+                </div>
+              )}
 
             </div>
 
@@ -669,22 +719,168 @@ export function ComplaintDetailPage() {
         </main>
       </div>
 
-      {/* Response Dispatch Confirmation Modal Dialog */}
+      {/* REQUEST PROOF / INFORMATION FROM DEPARTMENT MODAL */}
+      {showDeptModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Building2 className="w-5 h-5 text-blue-400" />
+                <span>Request Information from Department</span>
+              </h3>
+              <button onClick={() => setShowDeptModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSendDepartmentRequest} className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-300">Select Concerned Department *</label>
+                <select
+                  required
+                  value={deptForm.departmentName}
+                  onChange={(e) => {
+                    const selected = departments.find(d => d.name === e.target.value);
+                    setDeptForm({ ...deptForm, departmentName: e.target.value, departmentId: selected ? selected.id : '' });
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  {departments.map(d => (
+                    <option key={d.id} value={d.name}>{d.name} ({d.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-300">Required Proof / Information *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={deptForm.requiredInformation}
+                  onChange={(e) => setDeptForm({ ...deptForm, requiredInformation: e.target.value })}
+                  placeholder="Specify exact records, transaction logs, or evidence needed..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-300">Reason for Routing *</label>
+                <input
+                  type="text"
+                  required
+                  value={deptForm.reason}
+                  onChange={(e) => setDeptForm({ ...deptForm, reason: e.target.value })}
+                  placeholder="Explain why this department is required to investigate..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Priority Level *</label>
+                  <select
+                    value={deptForm.priority}
+                    onChange={(e) => setDeptForm({ ...deptForm, priority: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="P1">P1 — Critical (Emergency)</option>
+                    <option value="P2">P2 — High</option>
+                    <option value="P3">P3 — Medium</option>
+                    <option value="P4">P4 — Low</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Expected Response Deadline</label>
+                  <input
+                    type="date"
+                    value={deptForm.deadline}
+                    onChange={(e) => setDeptForm({ ...deptForm, deadline: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeptModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingDeptReq}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-all flex items-center space-x-2"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{sendingDeptReq ? 'Routing Request...' : 'Send Request'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REQUEST MORE INFORMATION MODAL */}
+      {showMoreInfoModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">Request More Information from Department</h3>
+              <button onClick={() => setShowMoreInfoModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-300 block mb-1">Additional Information Required *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={moreInfoText}
+                  onChange={(e) => setMoreInfoText(e.target.value)}
+                  placeholder="Detail what specific clarification or proof is missing from the department report..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreInfoModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReviewDepartmentReport('REQUEST_MORE_INFO')}
+                  disabled={actionLoading || !moreInfoText.trim()}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-semibold"
+                >
+                  Send Request
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Response Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-slate-900">
-            <div className="flex items-center space-x-3 text-amber-600">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center font-bold">
+            <div className="flex items-center space-x-3 text-blue-600">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center font-bold">
                 <Send className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Confirm Customer Response Dispatch</h3>
-                <p className="text-2xs text-slate-500">Action cannot be undone once emailed.</p>
+                <h3 className="text-base font-bold text-slate-900">Confirm Response & Resolution</h3>
+                <p className="text-2xs text-slate-500">Please confirm investigation completion before dispatch.</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-              Are you sure you want to send this official resolution response to <strong>{complaint.email}</strong> and mark complaint <strong>{complaint.complaintNumber}</strong> as RESOLVED?
+              Please confirm that the investigation for case <strong>{complaint.complaintNumber}</strong> is complete and the final response is ready to be sent to <strong>{complaint.email}</strong>.
             </p>
 
             <div className="flex justify-end space-x-3 pt-2">
@@ -702,85 +898,31 @@ export function ComplaintDetailPage() {
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center space-x-1.5 disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
-                <span>{actionLoading ? 'Dispatching Email...' : 'Confirm & Send Response'}</span>
+                <span>{actionLoading ? 'Dispatching...' : 'Confirm & Send Response'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROOF DOCUMENT VIEWER MODAL */}
+      {/* PROOF PREVIEW MODAL */}
       {showProofModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                  <FileCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Customer Proof Document Viewer</h3>
-                  <p className="text-2xs text-slate-500 font-medium">Verified Evidence for Ticket #{complaint.complaintNumber}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowProofModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
+              <h3 className="text-base font-bold text-slate-900">Customer Proof Preview</h3>
+              <button onClick={() => setShowProofModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200/80">
-                <span className="font-mono font-bold text-blue-600">{complaint.complaintNumber}</span>
-                <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  AUTOMATED OCR VERIFIED ✓
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-slate-600">
-                <div>
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block">Customer Name</span>
-                  <span className="font-bold text-slate-900">{complaint.name}</span>
-                </div>
-                <div>
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block">Location / Store</span>
-                  <span className="font-bold text-slate-900">{complaint.place || 'Main Store'}</span>
-                </div>
-                <div>
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block">Category</span>
-                  <span className="font-bold text-slate-900">{complaint.category}</span>
-                </div>
-                <div>
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block">Submitted On</span>
-                  <span className="font-bold text-slate-900">{new Date(complaint.createdAt).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200/80">
-                <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Extracted Proof OCR Summary</span>
-                <p className="p-3 bg-white rounded-xl border border-slate-200/80 text-slate-800 font-medium leading-relaxed">
-                  {aiAnalysis?.attachmentSummary || 'Customer document receipt proof verified. Transaction amount and date match complaint details.'}
-                </p>
-              </div>
-
+              <p className="text-slate-800 font-medium">{aiAnalysis?.attachmentSummary || 'Customer document proof verified.'}</p>
               {complaint.attachmentUrl && complaint.attachmentUrl.startsWith('data:image/') && (
-                <div className="pt-2">
-                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Attached Image Scan</span>
-                  <img src={complaint.attachmentUrl} alt="Scan" className="w-full max-h-56 rounded-xl object-contain border border-slate-200 bg-white" />
-                </div>
+                <img src={complaint.attachmentUrl} alt="Scan" className="w-full max-h-56 rounded-xl object-contain border border-slate-200 bg-white" />
               )}
             </div>
 
-            <div className="flex justify-end space-x-3 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowProofModal(false)}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                Close Preview
-              </button>
+            <div className="flex justify-end pt-1">
+              <button onClick={() => setShowProofModal(false)} className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl">Close</button>
             </div>
           </div>
         </div>

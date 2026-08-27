@@ -12,6 +12,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
+import departmentRoutes from './routes/departmentRoutes.js';
+import feedbackRoutes from './routes/feedbackRoutes.js';
 
 dotenv.config();
 
@@ -47,6 +49,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', auditRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
