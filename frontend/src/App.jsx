@@ -43,44 +43,89 @@ function AdminProtectedRoute({ children }) {
   return children;
 }
 
+const PORTAL = (import.meta.env.VITE_PORTAL || 'user').toLowerCase();
+
 export default function App() {
+  const isStaffPortal = PORTAL === 'staff' || PORTAL === 'admin';
+  const isAllPortal = PORTAL === 'all' || PORTAL === 'both';
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* PORTAL 1: PUBLIC USER ROUTES */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/complaint" element={<ComplaintFormPage />} />
-          <Route path="/verify-email" element={<EmailVerifyPage />} />
-          <Route path="/complaint-success" element={<ComplaintSuccessPage />} />
-          <Route path="/track" element={<TrackComplaintPage />} />
-          <Route path="/complaint/:id" element={<TrackComplaintPage />} />
+          {isAllPortal ? (
+            <>
+              {/* ALL ROUTES (FOR COMBINED DEV / TESTING) */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/complaint" element={<ComplaintFormPage />} />
+              <Route path="/verify-email" element={<EmailVerifyPage />} />
+              <Route path="/complaint-success" element={<ComplaintSuccessPage />} />
+              <Route path="/track" element={<TrackComplaintPage />} />
+              <Route path="/complaint/:id" element={<TrackComplaintPage />} />
 
-          {/* PORTAL 2: SEPARATE OFFICE & STAFF LOGIN ROUTES */}
-          <Route path="/office" element={<StaffLoginPage />} />
-          <Route path="/office/login" element={<StaffLoginPage />} />
-          <Route path="/admin/login" element={<StaffLoginPage />} />
-          <Route path="/staff/login" element={<StaffLoginPage />} />
+              <Route path="/office" element={<StaffLoginPage />} />
+              <Route path="/office/login" element={<StaffLoginPage />} />
+              <Route path="/admin/login" element={<StaffLoginPage />} />
+              <Route path="/staff/login" element={<StaffLoginPage />} />
+              <Route path="/login" element={<StaffLoginPage />} />
 
-          {/* PORTAL 2: STAFF PROTECTED ROUTES */}
-          <Route path="/staff/dashboard" element={<StaffProtectedRoute><StaffDashboardPage /></StaffProtectedRoute>} />
-          <Route path="/staff/complaints" element={<StaffProtectedRoute><ComplaintInboxPage /></StaffProtectedRoute>} />
-          <Route path="/staff/complaints/:id" element={<StaffProtectedRoute><ComplaintDetailPage /></StaffProtectedRoute>} />
-          <Route path="/staff/departments" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
-          <Route path="/staff/department-queue" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
-          <Route path="/staff/analytics" element={<StaffProtectedRoute><StaffAnalyticsPage /></StaffProtectedRoute>} />
-          <Route path="/staff/reports" element={<StaffProtectedRoute><StaffReportsPage /></StaffProtectedRoute>} />
-          <Route path="/staff/notifications" element={<StaffProtectedRoute><StaffNotificationsPage /></StaffProtectedRoute>} />
-          <Route path="/staff/profile" element={<StaffProtectedRoute><StaffProfilePage /></StaffProtectedRoute>} />
+              <Route path="/staff/dashboard" element={<StaffProtectedRoute><StaffDashboardPage /></StaffProtectedRoute>} />
+              <Route path="/staff/complaints" element={<StaffProtectedRoute><ComplaintInboxPage /></StaffProtectedRoute>} />
+              <Route path="/staff/complaints/:id" element={<StaffProtectedRoute><ComplaintDetailPage /></StaffProtectedRoute>} />
+              <Route path="/staff/departments" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
+              <Route path="/staff/department-queue" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
+              <Route path="/staff/analytics" element={<StaffProtectedRoute><StaffAnalyticsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/reports" element={<StaffProtectedRoute><StaffReportsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/notifications" element={<StaffProtectedRoute><StaffNotificationsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/profile" element={<StaffProtectedRoute><StaffProfilePage /></StaffProtectedRoute>} />
 
-          {/* PORTAL 2: ADMIN PROTECTED ROUTES */}
-          <Route path="/staff/admin/feedback" element={<AdminProtectedRoute><FeedbackInsightsPage /></AdminProtectedRoute>} />
-          <Route path="/staff/admin/users" element={<AdminProtectedRoute><UserManagementPage /></AdminProtectedRoute>} />
-          <Route path="/staff/admin/settings" element={<AdminProtectedRoute><SettingsPage /></AdminProtectedRoute>} />
-          <Route path="/staff/admin/audit-logs" element={<AdminProtectedRoute><AuditLogsPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/feedback" element={<AdminProtectedRoute><FeedbackInsightsPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/users" element={<AdminProtectedRoute><UserManagementPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/settings" element={<AdminProtectedRoute><SettingsPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/audit-logs" element={<AdminProtectedRoute><AuditLogsPage /></AdminProtectedRoute>} />
 
-          {/* Fallback redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          ) : isStaffPortal ? (
+            <>
+              {/* STAFF / ADMIN PORTAL VERCEL DEPLOYMENT BUILD */}
+              <Route path="/" element={<StaffLoginPage />} />
+              <Route path="/office" element={<StaffLoginPage />} />
+              <Route path="/office/login" element={<StaffLoginPage />} />
+              <Route path="/admin/login" element={<StaffLoginPage />} />
+              <Route path="/staff/login" element={<StaffLoginPage />} />
+              <Route path="/login" element={<StaffLoginPage />} />
+
+              <Route path="/staff/dashboard" element={<StaffProtectedRoute><StaffDashboardPage /></StaffProtectedRoute>} />
+              <Route path="/staff/complaints" element={<StaffProtectedRoute><ComplaintInboxPage /></StaffProtectedRoute>} />
+              <Route path="/staff/complaints/:id" element={<StaffProtectedRoute><ComplaintDetailPage /></StaffProtectedRoute>} />
+              <Route path="/staff/departments" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
+              <Route path="/staff/department-queue" element={<StaffProtectedRoute><DepartmentCoordinationPage /></StaffProtectedRoute>} />
+              <Route path="/staff/analytics" element={<StaffProtectedRoute><StaffAnalyticsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/reports" element={<StaffProtectedRoute><StaffReportsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/notifications" element={<StaffProtectedRoute><StaffNotificationsPage /></StaffProtectedRoute>} />
+              <Route path="/staff/profile" element={<StaffProtectedRoute><StaffProfilePage /></StaffProtectedRoute>} />
+
+              <Route path="/staff/admin/feedback" element={<AdminProtectedRoute><FeedbackInsightsPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/users" element={<AdminProtectedRoute><UserManagementPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/settings" element={<AdminProtectedRoute><SettingsPage /></AdminProtectedRoute>} />
+              <Route path="/staff/admin/audit-logs" element={<AdminProtectedRoute><AuditLogsPage /></AdminProtectedRoute>} />
+
+              <Route path="*" element={<Navigate to="/staff/login" replace />} />
+            </>
+          ) : (
+            <>
+              {/* USER PORTAL VERCEL DEPLOYMENT BUILD */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/complaint" element={<ComplaintFormPage />} />
+              <Route path="/verify-email" element={<EmailVerifyPage />} />
+              <Route path="/complaint-success" element={<ComplaintSuccessPage />} />
+              <Route path="/track" element={<TrackComplaintPage />} />
+              <Route path="/complaint/:id" element={<TrackComplaintPage />} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          )}
         </Routes>
       </BrowserRouter>
     </AuthProvider>
