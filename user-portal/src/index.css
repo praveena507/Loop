@@ -1,22 +1,24 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --bg-main: #f8fafc;
-    --bg-card: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --accent-blue: #2563eb;
-    --accent-blue-hover: #1d4ed8;
-    --border-color: #e2e8f0;
-  }
+@source "./**/*.{js,jsx,ts,tsx,html}";
+@source "../src/**/*.{js,jsx,ts,tsx,html}";
 
-  body {
-    background-color: var(--bg-main);
-    color: var(--text-primary);
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --border-color: #e2e8f0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
 /* Custom Utilities */
