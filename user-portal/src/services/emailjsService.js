@@ -11,10 +11,21 @@ export async function sendEmailJSVerification({ to_email, user_name, passcode, e
   try {
     const templateParams = {
       to_email: to_email,
+      user_email: to_email,
+      email: to_email,
+      recipient_email: to_email,
+      to_name: user_name || 'Valued User',
       user_name: user_name || 'Valued User',
+      name: user_name || 'Valued User',
       passcode: passcode,
+      otp: passcode,
+      code: passcode,
+      verification_code: passcode,
+      message: `Your LOOP verification code is: ${passcode}`,
       expiry_time: expiresAt ? new Date(expiresAt).toLocaleTimeString() : '2.5 minutes',
-      portal_name: 'LOOP Customer Grievance Resolution Portal'
+      time: expiresAt ? new Date(expiresAt).toLocaleTimeString() : '2.5 minutes',
+      portal_name: 'LOOP Customer Grievance Resolution Portal',
+      from_name: 'LOOP Support Team'
     };
 
     const response = await emailjs.send(
@@ -24,9 +35,10 @@ export async function sendEmailJSVerification({ to_email, user_name, passcode, e
       EMAILJS_PUBLIC_KEY
     );
 
+    console.log('[EmailJS Client] Verification email dispatched successfully to:', to_email);
     return { success: true, response };
   } catch (error) {
-    console.warn('Client EmailJS notification dispatch failed (Server backup active):', error);
+    console.warn('[EmailJS Client] Client-side EmailJS dispatch failed:', error);
     return { success: false, error: error.message || 'EmailJS dispatch failed' };
   }
 }

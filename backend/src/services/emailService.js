@@ -116,11 +116,21 @@ export async function createEmailVerification(email, name = 'LOOP User') {
   // 1. Try EmailJS REST API first
   const emailjsSuccess = await sendEmailViaEmailJS({
     user_name: name || 'LOOP User',
+    to_name: name || 'LOOP User',
+    name: name || 'LOOP User',
     passcode: otp,
+    otp: otp,
+    code: otp,
+    verification_code: otp,
+    message: `Your LOOP verification code is: ${otp}`,
     time: expiryTime,
+    expiry_time: expiryTime,
     to_email: email,
     email: email,
-    user_email: email
+    user_email: email,
+    recipient_email: email,
+    portal_name: 'LOOP Customer Grievance Resolution Platform',
+    from_name: 'LOOP Customer Support'
   });
 
   if (emailjsSuccess) {

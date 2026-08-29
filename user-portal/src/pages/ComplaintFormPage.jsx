@@ -90,7 +90,9 @@ export function ComplaintFormPage() {
           complaintId: res.complaint.id,
           complaintNumber: res.complaint.complaintNumber,
           email: formData.email.trim(),
-          name: formData.name.trim()
+          name: formData.name.trim(),
+          otp: res.otp,
+          expiresAt: res.expiresAt
         }));
         navigate('/verify-email');
       }
