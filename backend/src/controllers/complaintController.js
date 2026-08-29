@@ -156,6 +156,55 @@ export async function trackComplaint(req, res) {
   }
 }
 
+/**
+ * Public / User Portal: Get all complaints submitted by a customer email
+ */
+export async function getUserComplaints(req, res) {
+  try {
+    const email = req.query.email || req.body.email || (req.user && req.user.email);
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, error: 'Customer email is required to fetch complaints.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const rows = await dbAll(
+      `SELECT id, complaintNumber, place, category, reason, description, attachmentUrl, status, createdAt, updatedAt
+       FROM complaints
+       WHERE LOWER(email) = ?
+       ORDER BY createdAt DESC`,
+      [cleanEmail]
+    );
+
+    // Attach response & feedback info for each complaint
+    const complaints = await Promise.all(
+      rows.map(async (cmp) => {
+        const response = await dbGet('SELECT responseText, sentAt FROM responses WHERE complaintId = ?', [cmp.id]);
+        const feedback = await dbGet('SELECT rating, resolvedSatisfaction, feedbackText, createdAt FROM complaint_feedback WHERE complaintId = ?', [cmp.id]);
+        return {
+          ...cmp,
+          response: response ? {
+            responseText: response.responseText,
+            sentAt: response.sentAt,
+            senderLabel: 'LOOP Support Team'
+          } : null,
+          feedback: feedback || null
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      count: complaints.length,
+      complaints
+    });
+
+  } catch (err) {
+    console.error('Get user complaints error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch user complaints history.' });
+  }
+}
+
 export async function getStaffComplaints(req, res) {
   try {
     const { status, category, priority, search, assignedToMe, unassignedOnly } = req.query;
@@ -251,16 +300,23 @@ export async function getStaffComplaintById(req, res) {
     // STRICT BACKEND AUTHORIZATION:
     // Check latest assigned analyst
     const assignedRow = await dbGet(
-      `SELECT ca.analystId, su.name as analystName
+      `SELECT ca.analystId, su.id as staffId, su.email as staffEmail, su.name as analystName
        FROM complaint_actions ca
-       LEFT JOIN staff_users su ON ca.analystId = su.id
+       LEFT JOIN staff_users su ON (ca.analystId = su.id OR LOWER(ca.analystId) = LOWER(su.email))
        WHERE ca.complaintId = ? AND ca.analystId IS NOT NULL
        ORDER BY ca.createdAt DESC LIMIT 1`,
       [complaint.id]
     );
 
     if (user && user.role === 'ANALYST') {
-      if (!assignedRow || assignedRow.analystId !== user.id) {
+      const isAssignedToUser = assignedRow && (
+        assignedRow.analystId === user.id ||
+        assignedRow.staffId === user.id ||
+        (assignedRow.staffEmail && assignedRow.staffEmail.toLowerCase() === user.email.toLowerCase()) ||
+        (assignedRow.analystId && assignedRow.analystId.toLowerCase() === user.email.toLowerCase())
+      );
+
+      if (!isAssignedToUser) {
         return res.status(403).json({
           success: false,
           error: 'Forbidden: Access denied. This complaint is not assigned to your analyst account.'

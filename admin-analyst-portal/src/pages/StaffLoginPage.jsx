@@ -1,0 +1,531 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import { Cpu, Lock, Mail, Eye, EyeOff, AlertCircle, KeyRound, CheckCircle2, X, Sparkles, UserCheck, ShieldCheck } from 'lucide-react';
+
+export function StaffLoginPage() {
+  const navigate = useNavigate();
+  const { login, loading: authLoading } = useAuth();
+
+  // Active Role Tab: 'ANALYST' or 'ADMIN'
+  const [activeTab, setActiveTab] = useState('ANALYST');
+
+  // Login Form State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Forgot Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [devResetOtp, setDevResetOtp] = useState('');
+
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState(null);
+  const [forgotSuccess, setForgotSuccess] = useState(null);
+
+  // Quick Switch Roles
+  const handleSwitchTab = (role) => {
+    setActiveTab(role);
+    setError(null);
+    setEmail('');
+    setPassword('');
+  };
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!email || !password) {
+      setError('Please enter staff email and password.');
+      return;
+    }
+
+    const res = await login(email.trim(), password);
+    if (res.success) {
+      if (activeTab === 'ADMIN' && res.user.role !== 'ADMIN') {
+        setError('This account does not have System Administrator privileges.');
+        return;
+      }
+      navigate('/staff/dashboard');
+    } else {
+      setError(res.error || 'Authentication failed. Please verify staff credentials.');
+    }
+  };
+
+  const handleRequestOTP = async (e) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    if (!resetEmail.trim()) {
+      setForgotError('Please enter your registered staff email.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await api.staffForgotPassword(resetEmail.trim());
+      if (res.success) {
+        setForgotSuccess(res.message);
+        setDevResetOtp(res.devOtp || '');
+        setForgotStep(2);
+      }
+    } catch (err) {
+      setForgotError(err.message || 'Failed to dispatch password reset code.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    if (!resetOtp.trim() || resetOtp.trim().length < 6) {
+      setForgotError('Please enter a valid 6-digit OTP verification code.');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setForgotError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await api.staffResetPassword({
+        email: resetEmail.trim(),
+        otp: resetOtp.trim(),
+        newPassword
+      });
+
+      if (res.success) {
+        setForgotSuccess('Password reset successfully! You can now log in.');
+        setTimeout(() => {
+          setEmail(resetEmail.trim());
+          setPassword(newPassword);
+          setShowForgotModal(false);
+          setForgotStep(1);
+          setResetEmail('');
+          setResetOtp('');
+          setNewPassword('');
+          setConfirmPassword('');
+        }, 1500);
+      }
+    } catch (err) {
+      setForgotError(err.message || 'Failed to reset password.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col justify-center bg-slate-900 px-4 sm:px-6 lg:px-8 py-12">
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl">
+
+        {/* Staff Brand Header */}
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold mx-auto shadow-lg shadow-blue-500/30">
+            <Cpu className="w-7 h-7" />
+          </div>
+          <h2 className="mt-4 text-2xl font-extrabold text-white tracking-tight">LOOP Staff Secure Portal</h2>
+          <p className="mt-1 text-xs text-slate-400 font-medium">Select your staff role below to sign in with authorized credentials.</p>
+        </div>
+
+        {/* DUAL ROLE SECTION SWITCHER */}
+        <div className="grid grid-cols-2 gap-3 mb-6 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+          
+          {/* SECTION 1: ANALYST PORTAL TAB */}
+          <button
+            type="button"
+            onClick={() => handleSwitchTab('ANALYST')}
+            className={`p-3.5 rounded-xl transition-all flex flex-col items-center justify-center text-center cursor-pointer ${
+              activeTab === 'ANALYST'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold border border-blue-500'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/60 font-medium'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <UserCheck className="w-4 h-4" />
+              <span className="text-sm">Analyst Sign In</span>
+            </div>
+            <span className="text-2xs opacity-80 mt-0.5">Complaint Review & AI Workbench</span>
+          </button>
+
+          {/* SECTION 2: ADMINISTRATOR PORTAL TAB */}
+          <button
+            type="button"
+            onClick={() => handleSwitchTab('ADMIN')}
+            className={`p-3.5 rounded-xl transition-all flex flex-col items-center justify-center text-center cursor-pointer ${
+              activeTab === 'ADMIN'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold border border-indigo-500'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/60 font-medium'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-200" />
+              <span className="text-sm">Admin Sign In</span>
+            </div>
+            <span className="text-2xs opacity-80 mt-0.5">Case Assignment & User Management</span>
+          </button>
+
+        </div>
+
+        {/* Main Login Card */}
+        <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-8 shadow-2xl">
+          
+          {/* Section Indicator Banner */}
+          <div className={`mb-6 p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold ${
+            activeTab === 'ANALYST'
+              ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+              : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
+          }`}>
+            <span className="flex items-center">
+              {activeTab === 'ANALYST' ? <UserCheck className="w-4 h-4 mr-2 text-blue-400" /> : <ShieldCheck className="w-4 h-4 mr-2 text-indigo-400" />}
+              {activeTab === 'ANALYST' ? 'ANALYST WORKBENCH ACCESS' : 'ADMINISTRATIVE ACCESS'}
+            </span>
+          </div>
+
+          {/* Demo Credentials Box & 1-Click Autofill */}
+          <div className="mb-6 p-4 rounded-xl bg-slate-900/80 border border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 mr-1.5" />
+                Demo Credentials (1-Click Fill)
+              </span>
+              <span className="text-3xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Test Accounts</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Analyst Demo Fill */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ANALYST');
+                  setEmail('analyst@loop.com');
+                  setPassword('Analyst@12345');
+                  setError(null);
+                }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  activeTab === 'ANALYST' && email === 'analyst@loop.com'
+                    ? 'bg-blue-950/70 border-blue-500 text-blue-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-slate-600 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center">
+                    <UserCheck className="w-3.5 h-3.5 text-blue-400 mr-1.5" />
+                    Analyst
+                  </span>
+                  <span className="text-3xs font-bold text-blue-400 bg-blue-900/50 px-1.5 py-0.5 rounded">Auto Fill</span>
+                </div>
+                <div className="mt-1 font-mono text-2xs text-slate-300">analyst@loop.com</div>
+                <div className="text-3xs text-slate-400 font-mono">Pass: Analyst@12345</div>
+              </button>
+
+              {/* Admin Demo Fill */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ADMIN');
+                  setEmail('admin@loop.com');
+                  setPassword('Admin@12345');
+                  setError(null);
+                }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  activeTab === 'ADMIN' && email === 'admin@loop.com'
+                    ? 'bg-indigo-950/70 border-indigo-500 text-indigo-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-slate-600 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 mr-1.5" />
+                    Administrator
+                  </span>
+                  <span className="text-3xs font-bold text-indigo-400 bg-indigo-900/50 px-1.5 py-0.5 rounded">Auto Fill</span>
+                </div>
+                <div className="mt-1 font-mono text-2xs text-slate-300">admin@loop.com</div>
+                <div className="text-3xs text-slate-400 font-mono">Pass: Admin@12345</div>
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start space-x-3">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>{error}</div>
+            </div>
+          )}
+
+          <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                {activeTab === 'ANALYST' ? 'Analyst Email Address' : 'Admin Email Address'}
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input
+                  type="email"
+                  required
+                  autoComplete="off"
+                  placeholder={activeTab === 'ANALYST' ? 'analyst@loop.com' : 'admin@loop.com'}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:border-transparent transition-all font-medium ${
+                    activeTab === 'ANALYST' ? 'focus:ring-blue-500' : 'focus:ring-indigo-500'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmail(email || '');
+                    setForgotStep(1);
+                    setForgotError(null);
+                    setForgotSuccess(null);
+                    setShowForgotModal(true);
+                  }}
+                  className={`text-2xs font-semibold hover:underline cursor-pointer ${
+                    activeTab === 'ANALYST' ? 'text-blue-400' : 'text-indigo-400'
+                  }`}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:border-transparent transition-all font-medium ${
+                    activeTab === 'ANALYST' ? 'focus:ring-blue-500' : 'focus:ring-indigo-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className={`w-full py-3.5 px-4 rounded-xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer ${
+                activeTab === 'ANALYST'
+                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                  : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
+              }`}
+            >
+              {activeTab === 'ANALYST' ? <UserCheck className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+              <span>
+                {authLoading
+                  ? 'Authenticating...'
+                  : activeTab === 'ANALYST'
+                  ? 'Sign In to Analyst Workbench'
+                  : 'Sign In to Administration'}
+              </span>
+            </button>
+          </form>
+
+        </div>
+
+      </div>
+
+      {/* Staff Forgot Password & OTP Reset Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 text-white shadow-2xl">
+            
+            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+              <div className="flex items-center space-x-2">
+                <KeyRound className="w-5 h-5 text-blue-400" />
+                <h3 className="text-base font-bold">Staff Password Reset</h3>
+              </div>
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {forgotError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {forgotSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{forgotSuccess}</span>
+              </div>
+            )}
+
+            {/* STEP 1: Enter Email for OTP */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleRequestOTP} className="space-y-4">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Enter your registered staff email address (Admin or Analyst). We will send a 6-digit verification OTP code to reset your password.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                    Staff Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="analyst@loop.com or admin@loop.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 cursor-pointer"
+                  >
+                    {forgotLoading ? 'Dispatching OTP...' : 'Send Verification OTP'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: Enter OTP & Set New Password */}
+            {forgotStep === 2 && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                
+                {devResetOtp && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Sparkles className="w-4 h-4 mr-1 text-amber-400" />
+                      Test Reset OTP:
+                    </span>
+                    <span className="font-mono text-sm tracking-widest bg-amber-900/60 px-2 py-0.5 rounded text-amber-200">
+                      {devResetOtp}
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                    6-Digit Verification Code (OTP) *
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="123456"
+                    value={resetOtp}
+                    onChange={(e) => setResetOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full text-center text-xl font-mono tracking-widest py-2.5 px-4 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                    New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="At least 6 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    className="text-xs text-blue-400 hover:underline cursor-pointer"
+                  >
+                    ← Change Email
+                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotModal(false)}
+                      className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 cursor-pointer"
+                    >
+                      {forgotLoading ? 'Resetting Password...' : 'Reset Password'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

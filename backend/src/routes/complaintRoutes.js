@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createComplaint,
   trackComplaint,
+  getUserComplaints,
   getStaffComplaints,
   getStaffComplaintById,
   recordComplaintAction,
@@ -18,6 +19,9 @@ const router = Router();
 // Public Customer Routes
 router.post('/complaints', createComplaint);
 router.get('/complaints/track', trackComplaint);
+router.get('/user/complaints', getUserComplaints);
+router.get('/complaints/user', getUserComplaints);
+
 
 // Department Report Submission (Department action)
 router.post('/staff/department-requests/:requestId/report', authenticateStaff, submitDepartmentReport);

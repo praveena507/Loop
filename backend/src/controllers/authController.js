@@ -206,3 +206,83 @@ export async function registerAnalyst(req, res) {
     return res.status(500).json({ success: false, error: 'Server error during analyst registration.' });
   }
 }
+
+/**
+ * Customer / User Portal Authentication: Request OTP
+ */
+export async function customerRequestOTP(req, res) {
+  try {
+    const { email, name } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, error: 'Email address is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const verification = await createEmailVerification(cleanEmail, name || 'LOOP User');
+
+    return res.json({
+      success: true,
+      message: `Login verification code sent to ${cleanEmail}.`,
+      expiresAt: verification.expiresAt,
+      otp: verification.otp
+    });
+  } catch (err) {
+    console.error('Customer request OTP error:', err);
+    return res.status(400).json({ success: false, error: err.message || 'Failed to send login code.' });
+  }
+}
+
+/**
+ * Customer / User Portal Authentication: Verify OTP and Login
+ */
+export async function customerVerifyOTP(req, res) {
+  try {
+    const { email, otp, name } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and verification code are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const verificationResult = await verifyEmailOTP(cleanEmail, otp.trim());
+
+    if (!verificationResult.success) {
+      return res.status(400).json({ success: false, error: verificationResult.message });
+    }
+
+    const now = new Date().toISOString();
+    let customer = await dbGet('SELECT * FROM customers WHERE LOWER(email) = ?', [cleanEmail]);
+
+    if (!customer) {
+      const custId = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const customerName = (name && name.trim()) ? name.trim() : cleanEmail.split('@')[0];
+      await dbRun(
+        `INSERT INTO customers (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 1, ?, ?)`,
+        [custId, customerName, cleanEmail, now, now]
+      );
+      customer = { id: custId, name: customerName, email: cleanEmail, emailVerified: 1 };
+    } else {
+      await dbRun('UPDATE customers SET emailVerified = 1, updatedAt = ? WHERE id = ?', [now, customer.id]);
+    }
+
+    const token = jwt.sign(
+      { id: customer.id, email: customer.email, name: customer.name, role: 'CUSTOMER' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        role: 'CUSTOMER'
+      }
+    });
+  } catch (err) {
+    console.error('Customer verify OTP error:', err);
+    return res.status(500).json({ success: false, error: 'Server error during customer verification.' });
+  }
+}
+
