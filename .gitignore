@@ -7,10 +7,12 @@ node_modules/
 .env.local
 .env.*.local
 
-# Build Outputs
+# Build Outputs & Caches
 dist/
 build/
 .out/
+.vite/
+*.tsbuildinfo
 
 # Database Files & Logs
 *.db
@@ -21,4 +23,3 @@ build/
 .DS_Store
 Thumbs.db
 scratch/
-
