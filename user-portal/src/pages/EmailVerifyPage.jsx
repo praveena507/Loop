@@ -104,26 +104,9 @@ export function EmailVerifyPage() {
 
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Verify Your Email</h1>
             <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed">
-              Enter the 6-digit verification code sent to <br />
-              <span className="font-semibold text-slate-800 break-all">{sessionData.email}</span>
+              Enter the 6-digit verification code sent to your email inbox: <br />
+              <span className="font-semibold text-blue-600 break-all">{sessionData.email}</span>
             </p>
-
-            {/* Test Helper / Auto-Fill Code Banner */}
-            {devOtp && (
-              <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 shadow-xs">
-                <div className="flex items-center space-x-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="font-medium">Verification Code: <strong className="font-mono text-sm tracking-widest bg-amber-200/70 px-2 py-0.5 rounded text-amber-950">{devOtp}</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtp(devOtp)}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-2xs transition-colors shrink-0 cursor-pointer w-full sm:w-auto"
-                >
-                  1-Click Fill Code
-                </button>
-              </div>
-            )}
 
             {error && (
               <div className="mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2 text-left">

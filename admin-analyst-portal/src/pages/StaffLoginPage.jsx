@@ -438,18 +438,9 @@ export function StaffLoginPage() {
             {/* STEP 2: Enter OTP & Set New Password */}
             {forgotStep === 2 && (
               <form onSubmit={handleResetPassword} className="space-y-4">
-                
-                {devResetOtp && (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-between">
-                    <span className="flex items-center">
-                      <Sparkles className="w-4 h-4 mr-1 text-amber-400" />
-                      Test Reset OTP:
-                    </span>
-                    <span className="font-mono text-sm tracking-widest bg-amber-900/60 px-2 py-0.5 rounded text-amber-200">
-                      {devResetOtp}
-                    </span>
-                  </div>
-                )}
+                <p className="text-xs text-slate-300">
+                  Please enter the 6-digit verification code sent to <strong className="text-white">{resetEmail}</strong>:
+                </p>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">

@@ -168,17 +168,9 @@ export function UserLoginPage() {
               </form>
             ) : (
               <form onSubmit={handleVerifyLogin} className="space-y-4">
-                {devOtp && (
-                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold flex items-center justify-between">
-                    <span className="flex items-center">
-                      <Sparkles className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                      Verification Code:
-                    </span>
-                    <span className="font-mono text-sm tracking-widest bg-blue-100 px-2 py-0.5 rounded text-blue-900">
-                      {devOtp}
-                    </span>
-                  </div>
-                )}
+                <p className="text-xs text-slate-500 mb-2">
+                  Please enter the 6-digit code sent to <strong className="text-slate-800">{email}</strong>:
+                </p>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
