@@ -23,8 +23,8 @@
 | Component | Target Role | Live URL | Platform |
 |:---|:---|:---|:---|
 | 🌐 **Main Landing Gateway** | **Single Submission / Evaluation Entry** | [**landing-portal-beige.vercel.app**](https://landing-portal-beige.vercel.app) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
-| 👤 **Customer / User Portal** | Customers & Complainants | [**user-portal-w2ol.vercel.app**](https://user-portal-w2ol.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
-| 🛡️ **Admin & Analyst Portal** | Case Analysts & System Admins | [**admin-analyst-portal.vercel.app**](https://admin-analyst-portal.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
+| 👤 **Customer / User Portal** | Customers & Complainants | [**user-portal-8vee-1.vercel.app**](https://user-portal-8vee-1.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
+| 🛡️ **Admin & Analyst Portal** | Case Analysts & System Admins | [**admin-analyst-portal-1.vercel.app**](https://admin-analyst-portal-1.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
 | ⚙️ **Shared Backend REST API** | Core Intelligence API Service | [**loop-backend-ahtf.onrender.com**](https://loop-backend-ahtf.onrender.com/api/health) | ![Render](https://img.shields.io/badge/Render-46E3B7?style=flat-square&logo=render&logoColor=black) |
 
 ---
@@ -50,7 +50,7 @@ The hackathon/project evaluation submission allows only **ONE deployed URL**. Th
                  ▼                                                 ▼
   ┌───────────────────────────────┐                 ┌───────────────────────────────┐
   │         USER PORTAL           │                 │    ADMIN & ANALYST PORTAL     │
-  │  user-portal-w2ol.vercel.app  │                 │admin-analyst-portal.vercel.app│
+  │ user-portal-8vee-1.vercel.app │                 │admin-analyst-portal-1.vercel.app│
   │ • Submit Grievances           │                 │ • Workload-Balanced Assign    │
   │ • Email OTP Verification      │                 │ • AI Decision Support Review  │
   │ • Live Ticket Tracking        │                 │ • Department Proof Requests   │
@@ -111,7 +111,7 @@ LOOP/
 - **Features**: Enterprise SaaS design, dual portal launch cards, interactive 7-phase workflow timeline, platform capability showcase, security and trust guarantees, responsive navigation drawer, and environment-driven redirection.
 
 ### 2. Customer / User Portal (`user-portal/`)
-- **Live Deployment**: [**user-portal-w2ol.vercel.app**](https://user-portal-w2ol.vercel.app/)
+- **Live Deployment**: [**user-portal-8vee-1.vercel.app**](https://user-portal-8vee-1.vercel.app/)
 - **Port**: `3000`
 - **Role**: Public grievance filing, email verification, and tracking portal.
 - **Features**:
@@ -124,7 +124,7 @@ LOOP/
   - Customer profile management.
 
 ### 3. Admin & Analyst Portal (`admin-analyst-portal/`)
-- **Live Deployment**: [**admin-analyst-portal.vercel.app**](https://admin-analyst-portal.vercel.app/)
+- **Live Deployment**: [**admin-analyst-portal-1.vercel.app**](https://admin-analyst-portal-1.vercel.app/)
 - **Port**: `3002`
 - **Role**: Operational management workbench for administrators and analysts.
 - **Features**:
@@ -497,8 +497,8 @@ LOOP/
 ### 1. Landing Portal (`landing-portal/.env.example`)
 ```env
 # Production Portal Deployments
-VITE_USER_PORTAL_URL=https://user-portal-w2ol.vercel.app
-VITE_ADMIN_ANALYST_PORTAL_URL=https://admin-analyst-portal.vercel.app
+VITE_USER_PORTAL_URL=https://user-portal-8vee-1.vercel.app
+VITE_ADMIN_ANALYST_PORTAL_URL=https://admin-analyst-portal-1.vercel.app
 ```
 
 ### 2. User Portal (`user-portal/.env.example`)
