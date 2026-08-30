@@ -132,12 +132,10 @@ export function ComplaintDetailPage() {
 
   const fetchDetail = () => {
     setLoading(true);
-    const token = localStorage.getItem('loop_staff_token');
-    const headers = { Authorization: `Bearer ${token}` };
 
     Promise.all([
       api.getStaffComplaintById(id),
-      fetch('/api/departments', { headers }).then(r => r.json()).catch(() => ({ success: false }))
+      api.getDepartments().catch(() => ({ success: false }))
     ])
       .then(([resComp, resDepts]) => {
         if (resComp.success) {
@@ -240,16 +238,7 @@ export function ComplaintDetailPage() {
     setSuccessMsg(null);
     setError(null);
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const res = await fetch(`/api/staff/complaints/${data.complaint.id}/department-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(deptForm)
-      });
-      const resData = await res.json();
+      const resData = await api.sendDepartmentRequest(data.complaint.id, deptForm);
       if (resData.success) {
         setSuccessMsg(`Request successfully routed to ${deptForm.departmentName} department. Status set to WAITING_FOR_DEPARTMENT.`);
         setShowDeptModal(false);
@@ -258,7 +247,7 @@ export function ComplaintDetailPage() {
         alert(resData.error || 'Failed to route request to department.');
       }
     } catch (err) {
-      alert('Error sending request to department.');
+      alert(err.message || 'Error sending request to department.');
     } finally {
       setSendingDeptReq(false);
     }
@@ -273,22 +262,13 @@ export function ComplaintDetailPage() {
     setActionLoading(true);
     setSuccessMsg(null);
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const res = await fetch(`/api/staff/complaints/${data.complaint.id}/review-department-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          decision,
-          additionalInformationRequired: moreInfoText,
-          notes: compileCombinedNotes()
-        })
+      const resData = await api.reviewDepartmentReport(data.complaint.id, {
+        decision,
+        additionalInformationRequired: moreInfoText,
+        notes: compileCombinedNotes()
       });
-      const resData = await res.json();
       if (resData.success) {
-        setSuccessMsg(resData.message);
+        setSuccessMsg(resData.message || 'Department report reviewed successfully.');
         setShowMoreInfoModal(false);
         setMoreInfoText('');
         fetchDetail();
@@ -296,7 +276,7 @@ export function ComplaintDetailPage() {
         alert(resData.error || 'Failed to submit department report review.');
       }
     } catch (err) {
-      alert('Error reviewing department report.');
+      alert(err.message || 'Error reviewing department report.');
     } finally {
       setActionLoading(false);
     }

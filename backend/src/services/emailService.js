@@ -229,7 +229,8 @@ export async function sendSubmissionConfirmationEmail(email, complaintNumber) {
  * Send resolution response email to customer.
  */
 export async function sendResolutionEmail({ email, complaintNumber, responseText, resolutionDate }) {
-  const trackerUrl = `http://localhost:3000/track?complaintNumber=${encodeURIComponent(complaintNumber)}&email=${encodeURIComponent(email)}`;
+  const userPortalBase = (process.env.USER_PORTAL_URL || 'https://user-portal-w2ol.vercel.app').replace(/\/+$/, '');
+  const trackerUrl = `${userPortalBase}/track?complaintNumber=${encodeURIComponent(complaintNumber)}&email=${encodeURIComponent(email)}`;
   const formattedDate = new Date(resolutionDate || Date.now()).toLocaleString();
 
   const emailSubject = `[RESOLVED] Complaint #${complaintNumber} — Official Case Resolution Notice`;
@@ -315,7 +316,8 @@ export async function sendResolutionEmail({ email, complaintNumber, responseText
  * Send Analyst Account Welcome & Credentials Email.
  */
 export async function sendAnalystWelcomeEmail({ name, email, password, role = 'ANALYST' }) {
-  const portalUrl = 'http://localhost:3000/office';
+  const adminPortalBase = (process.env.ADMIN_PORTAL_URL || 'https://admin-analyst-portal.vercel.app').replace(/\/+$/, '');
+  const portalUrl = `${adminPortalBase}/login`;
   const emailSubject = `Welcome to LOOP Team — Your ${role} Credentials`;
 
   const sentViaEmailJS = await sendEmailViaEmailJS({

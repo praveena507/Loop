@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StaffHeader } from '../components/StaffHeader';
 import { StaffSidebar } from '../components/StaffSidebar';
+import { api } from '../services/api';
 import { 
   Building2, 
   Clock, 
@@ -53,29 +54,26 @@ export function DepartmentCoordinationPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const headers = { Authorization: `Bearer ${token}` };
+      // Fetch departments and queue via API service
+      const [deptsData, queueData] = await Promise.all([
+        api.getDepartments(),
+        api.getDepartmentQueue(selectedDept)
+      ]);
 
-      // Fetch departments
-      const deptsRes = await fetch('/api/departments', { headers });
-      const deptsData = await deptsRes.json();
       if (deptsData.success) {
         setDepartments(deptsData.departments);
       }
 
-      // Fetch department request queue
-      let queueUrl = '/api/departments/queue?';
-      if (selectedDept) queueUrl += `departmentName=${encodeURIComponent(selectedDept)}&`;
-      if (statusFilter) queueUrl += `status=${encodeURIComponent(statusFilter)}`;
-
-      const queueRes = await fetch(queueUrl, { headers });
-      const queueData = await queueRes.json();
       if (queueData.success) {
-        setRequests(queueData.requests);
+        let reqs = queueData.requests || [];
+        if (statusFilter) {
+          reqs = reqs.filter(r => r.status === statusFilter);
+        }
+        setRequests(reqs);
       }
     } catch (err) {
       console.error('Failed to load department data:', err);
-      setError('Could not connect to backend service.');
+      setError(err.message || 'Could not connect to backend service.');
     } finally {
       setLoading(false);
     }
@@ -99,16 +97,7 @@ export function DepartmentCoordinationPage() {
     setSubmittingReport(true);
     setSuccessMsg('');
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const res = await fetch(`/api/staff/department-requests/${activeReportRequest.id}/report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(reportForm)
-      });
-      const data = await res.json();
+      const data = await api.submitDepartmentReport(activeReportRequest.id, reportForm);
       if (data.success) {
         setSuccessMsg('Investigation report submitted successfully to Analyst.');
         setActiveReportRequest(null);
@@ -117,7 +106,7 @@ export function DepartmentCoordinationPage() {
         alert(data.error || 'Failed to submit investigation report.');
       }
     } catch (err) {
-      alert('Network error while submitting report.');
+      alert(err.message || 'Network error while submitting report.');
     } finally {
       setSubmittingReport(false);
     }
@@ -126,16 +115,7 @@ export function DepartmentCoordinationPage() {
   const handleCreateDepartment = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const res = await fetch('/api/departments/manage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(newDept)
-      });
-      const data = await res.json();
+      const data = await api.manageDepartment(newDept);
       if (data.success) {
         setShowAddDeptModal(false);
         setNewDept({ name: '', code: '', description: '' });
@@ -144,7 +124,7 @@ export function DepartmentCoordinationPage() {
         alert(data.error || 'Failed to create department.');
       }
     } catch (err) {
-      alert('Error creating department.');
+      alert(err.message || 'Error creating department.');
     }
   };
 

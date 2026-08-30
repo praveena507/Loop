@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Sensitive environment variables
 .env
-.env.production
+.env*.local
+!.env.example
+!.env.production

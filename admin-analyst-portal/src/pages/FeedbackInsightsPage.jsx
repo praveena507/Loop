@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StaffHeader } from '../components/StaffHeader';
 import { StaffSidebar } from '../components/StaffSidebar';
+import { api } from '../services/api';
 import { 
   MessageSquareHeart, 
   Star, 
@@ -27,11 +28,7 @@ export function FeedbackInsightsPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('loop_staff_token');
-      const res = await fetch('/api/feedback/insights', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
+      const json = await api.getFeedbackInsights();
       if (json.success) {
         setData(json);
       } else {
@@ -39,7 +36,7 @@ export function FeedbackInsightsPage() {
       }
     } catch (err) {
       console.error('Error fetching feedback insights:', err);
-      setError('Could not connect to server.');
+      setError(err.message || 'Could not connect to server.');
     } finally {
       setLoading(false);
     }
