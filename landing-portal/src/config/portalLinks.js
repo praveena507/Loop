@@ -6,13 +6,29 @@
  * - VITE_ADMIN_ANALYST_PORTAL_URL
  */
 
+const getNormalizedAdminUrl = () => {
+  const envUrl = (import.meta.env.VITE_ADMIN_ANALYST_PORTAL_URL || '').trim();
+  if (!envUrl || envUrl === 'https://admin-analyst-portal.vercel.app' || envUrl === 'https://admin-analyst-portal.vercel.app/') {
+    return 'https://admin-analyst-portal-1.vercel.app';
+  }
+  return envUrl;
+};
+
+const getNormalizedUserUrl = () => {
+  const envUrl = (import.meta.env.VITE_USER_PORTAL_URL || '').trim();
+  if (!envUrl || envUrl === 'https://user-portal-8vee.vercel.app' || envUrl === 'https://user-portal-8vee.vercel.app/') {
+    return 'https://user-portal-8vee-1.vercel.app';
+  }
+  return envUrl;
+};
+
 export const PORTAL_CONFIG = {
   USER_PORTAL: {
     id: 'user-portal',
     name: 'User Portal',
     badge: 'Citizen / Client Workspace',
     description: 'Submit complaints, verify email, track live status, and provide resolution feedback.',
-    url: (import.meta.env.VITE_USER_PORTAL_URL || 'https://user-portal-8vee-1.vercel.app').trim(),
+    url: getNormalizedUserUrl(),
     envKey: 'VITE_USER_PORTAL_URL',
     fallbackLocal: 'https://user-portal-8vee-1.vercel.app'
   },
@@ -21,7 +37,7 @@ export const PORTAL_CONFIG = {
     name: 'Admin & Analyst Portal',
     badge: 'Operations & Management Workspace',
     description: 'Manage incoming cases, assign by workload, conduct investigations, coordinate with departments, and finalize resolutions.',
-    url: (import.meta.env.VITE_ADMIN_ANALYST_PORTAL_URL || 'https://admin-analyst-portal-1.vercel.app').trim(),
+    url: getNormalizedAdminUrl(),
     envKey: 'VITE_ADMIN_ANALYST_PORTAL_URL',
     fallbackLocal: 'https://admin-analyst-portal-1.vercel.app'
   }
