@@ -22,7 +22,7 @@
 
 | Component | Target Role | Live URL | Platform |
 |:---|:---|:---|:---|
-| 🌐 **Main Landing Gateway** | **Single Submission / Evaluation Entry** | [**landing-portal-beige.vercel.app**](https://landing-portal-beige.vercel.app) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
+| 🌐 **Main Landing Gateway** | **Single Submission / Evaluation Entry** | [**landing-portal-gupr.vercel.app**](https://landing-portal-gupr.vercel.app) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
 | 👤 **Customer / User Portal** | Customers & Complainants | [**user-portal-8vee-1.vercel.app**](https://user-portal-8vee-1.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
 | 🛡️ **Admin & Analyst Portal** | Case Analysts & System Admins | [**admin-analyst-portal-1.vercel.app**](https://admin-analyst-portal-1.vercel.app/) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) |
 | ⚙️ **Shared Backend REST API** | Core Intelligence API Service | [**loop-backend-ahtf.onrender.com**](https://loop-backend-ahtf.onrender.com/api/health) | ![Render](https://img.shields.io/badge/Render-46E3B7?style=flat-square&logo=render&logoColor=black) |
@@ -37,13 +37,13 @@
 
 The hackathon/project evaluation submission allows only **ONE deployed URL**. The **LOOP Landing Portal** acts as the single unified evaluation gateway:
 
-👉 **[Open LOOP Landing Portal](https://landing-portal-beige.vercel.app)**
+👉 **[Open LOOP Landing Portal](https://landing-portal-gupr.vercel.app)**
 
 ```
                           ┌───────────────────────────────┐
                           │      LOOP Landing Portal      │
                           │   (Single Evaluation URL)     │
-                          │ landing-portal-beige.vercel.app│
+                          │ landing-portal-gupr.vercel.app│
                           └───────────────┬───────────────┘
                                           │
                  ┌────────────────────────┴────────────────────────┐
@@ -87,7 +87,7 @@ The **Landing Portal** (`landing-portal/`) is the single public gateway for the 
 - **Role-Based Navigation**: Features dedicated, prominent launchpads for both the **User Portal** and the **Admin & Analyst Portal**.
 - **Zero Secret Exposure**: Operates purely as a client gateway; does not store Supabase service keys, Gemini API keys, or backend secrets.
 - **Workflow & Architecture Showcase**: Details the 7-phase resolution lifecycle, system capabilities, and governance principles.
-- **Live Deployment**: [https://landing-portal-beige.vercel.app](https://landing-portal-beige.vercel.app)
+- **Live Deployment**: [https://landing-portal-gupr.vercel.app](https://landing-portal-gupr.vercel.app)
 
 ---
 
@@ -105,7 +105,7 @@ LOOP/
 ```
 
 ### 1. Landing Portal (`landing-portal/`)
-- **Live Deployment**: [**landing-portal-beige.vercel.app**](https://landing-portal-beige.vercel.app)
+- **Live Deployment**: [**landing-portal-gupr.vercel.app**](https://landing-portal-gupr.vercel.app)
 - **Port**: `3005`
 - **Role**: Single entry point for evaluators and users to select their workspace.
 - **Features**: Enterprise SaaS design, dual portal launch cards, interactive 7-phase workflow timeline, platform capability showcase, security and trust guarantees, responsive navigation drawer, and environment-driven redirection.
