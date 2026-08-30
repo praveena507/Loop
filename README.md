@@ -548,11 +548,24 @@ EMAILJS_PRIVATE_KEY=your_emailjs_private_key
 
 ---
 
+## 👥 Authors & Project Contributors
+
+- 👨‍💻 **Dineshkumar M**
+- 👩‍💻 **Sai Praveena**
+
+---
+
+## 🔗 Project Repository
+
+- **GitHub Repository**: [https://github.com/praveena507/Loop](https://github.com/praveena507/Loop)
+
+---
+
 ## 📄 License & Attribution
 
 Distributed under the **MIT License**.
 
-Developed with ❤️ as part of the **LOOP Customer Feedback & Grievance Intelligence Platform**.
+Developed with ❤️ by **Dineshkumar M** & **Sai Praveena** as part of the **LOOP Customer Feedback & Grievance Intelligence Platform**.
 
 <div align="center">
   <sub>Built with React 19, Node.js, Express, Tailwind CSS v4, Google Gemini AI, Supabase & Vercel.</sub>
