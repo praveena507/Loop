@@ -19,10 +19,10 @@ export function ComplaintInboxPage() {
   // Filters State
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || '');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || '');
   const [priorityFilter, setPriorityFilter] = useState(() => searchParams.get('priority') || '');
-  const [sentimentFilter, setSentimentFilter] = useState('');
-  const [assignedFilter, setAssignedFilter] = useState('');
+  const [sentimentFilter, setSentimentFilter] = useState(() => searchParams.get('sentiment') || '');
+  const [assignedFilter, setAssignedFilter] = useState(() => searchParams.get('assignedToMe') === 'true' ? 'mine' : '');
 
   const fetchComplaints = () => {
     setLoading(true);
@@ -45,8 +45,15 @@ export function ComplaintInboxPage() {
   useEffect(() => {
     const s = searchParams.get('status');
     const p = searchParams.get('priority');
+    const c = searchParams.get('category');
+    const sm = searchParams.get('sentiment');
+    const a = searchParams.get('assignedToMe');
+
     if (s !== null) setStatusFilter(s);
     if (p !== null) setPriorityFilter(p);
+    if (c !== null) setCategoryFilter(c);
+    if (sm !== null) setSentimentFilter(sm);
+    if (a !== null) setAssignedFilter(a === 'true' ? 'mine' : '');
   }, [searchParams]);
 
   useEffect(() => {
@@ -210,8 +217,11 @@ export function ComplaintInboxPage() {
                 <option value="Service">Service</option>
                 <option value="Payment">Payment</option>
                 <option value="Technical Issue">Technical Issue</option>
-                <option value="Account">Account</option>
+                <option value="Billing">Billing</option>
                 <option value="Delivery">Delivery</option>
+                <option value="Account">Account</option>
+                <option value="Safety">Safety</option>
+                <option value="Facility">Facility</option>
                 <option value="Other">Other</option>
               </select>
 

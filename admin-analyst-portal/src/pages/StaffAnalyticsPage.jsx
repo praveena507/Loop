@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { StaffSidebar } from '../components/StaffSidebar';
 import { StaffHeader } from '../components/StaffHeader';
 import { api } from '../services/api';
-import { BarChart3, PieChart, TrendingUp, Zap, ShieldCheck, Flame, Layers, AlertTriangle, FileCheck } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, Zap, ShieldCheck, Flame, Layers, AlertTriangle, FileCheck, ArrowUpRight } from 'lucide-react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -50,7 +51,7 @@ export function StaffAnalyticsPage() {
                   <Layers className="w-5 h-5 text-blue-600 mr-2" />
                   Section Problem Concentration Heatmap
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Identifies which business sections have the highest volume of customer problems.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Identifies which business sections have the highest volume of customer problems. Click any section to review cases.</p>
               </div>
               <span className="text-2xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                 Automated Category Classifier
@@ -58,22 +59,33 @@ export function StaffAnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-              {analytics?.sectionProblems?.map((sec, idx) => (
-                <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
-                    <span>{sec.sectionName}</span>
-                    {sec.criticalCount > 0 && (
-                      <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
-                        {sec.criticalCount} Critical
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-baseline space-x-2">
-                    <span className="text-2xl font-extrabold text-blue-600">{sec.count}</span>
-                    <span className="text-xs text-slate-500 font-medium">reported problems</span>
-                  </div>
-                </div>
-              ))}
+              {analytics?.sectionProblems?.map((sec, idx) => {
+                const categoryClean = (sec.sectionName || '').replace(/\s*Section\s*$/i, '').trim();
+                return (
+                  <Link
+                    key={idx}
+                    to={`/staff/complaints?category=${encodeURIComponent(categoryClean)}`}
+                    className="p-4 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 transition-all space-y-2 block group"
+                  >
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-800 group-hover:text-blue-600">
+                      <span>{sec.sectionName}</span>
+                      {sec.criticalCount > 0 && (
+                        <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                          {sec.criticalCount} Critical
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline space-x-2">
+                      <span className="text-2xl font-extrabold text-blue-600">{sec.count}</span>
+                      <span className="text-xs text-slate-500 font-medium">reported problems</span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-2xs font-bold text-blue-600 group-hover:text-blue-700">
+                      <span>Review Section Cases</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
