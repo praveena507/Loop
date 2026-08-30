@@ -35,8 +35,8 @@ body {
 /* Glass Panels */
 .glass-card {
   background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(51, 65, 85, 0.65);
 }
 
