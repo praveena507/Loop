@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-@source "./**/*.{js,jsx,ts,tsx,html}";
-@source "../src/**/*.{js,jsx,ts,tsx,html}";
-
 :root {
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
