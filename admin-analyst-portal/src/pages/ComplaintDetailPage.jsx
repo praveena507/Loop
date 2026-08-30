@@ -8,6 +8,8 @@ import { StatusBadge, PriorityBadge, SentimentBadge } from '../components/Badge'
 import {
   Sparkles,
   User,
+  UserCheck,
+  Users,
   Mail,
   MapPin,
   Calendar,
@@ -28,6 +30,7 @@ import {
   Building2,
   Clock,
   ArrowRight,
+  ArrowUpRight,
   HelpCircle,
   MessageSquare,
   AlertTriangle
@@ -376,10 +379,20 @@ export function ComplaintDetailPage() {
     );
   }
 
-  const { complaint, aiAnalysis, actions, response, departmentRequests, departmentReport, feedback, statusHistory } = data;
-  const isAwaitingDepartment = complaint.status === 'WAITING_FOR_DEPARTMENT';
-  const isReadyForAnalystReview = complaint.status === 'READY_FOR_ANALYST_REVIEW';
-  const isReadyForUserResponse = complaint.status === 'READY_FOR_USER_RESPONSE';
+  const {
+    complaint = {},
+    aiAnalysis = {},
+    actions = [],
+    response = null,
+    departmentRequests = [],
+    departmentReport = null,
+    feedback = null,
+    statusHistory = []
+  } = data || {};
+
+  const isAwaitingDepartment = complaint?.status === 'WAITING_FOR_DEPARTMENT';
+  const isReadyForAnalystReview = complaint?.status === 'READY_FOR_ANALYST_REVIEW';
+  const isReadyForUserResponse = complaint?.status === 'READY_FOR_USER_RESPONSE';
 
   return (
     <div className="flex min-h-screen bg-slate-50">
