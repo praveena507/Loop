@@ -44,9 +44,9 @@ app.get('/api/health', (req, res) => {
 // Live Database Reseed / Populate Endpoint
 app.all('/api/seed-database', async (req, res) => {
   try {
-    const { seed50Complaints } = await import('./scripts/seed50Complaints.js');
-    await seed50Complaints();
-    res.json({ success: true, message: '50 complaints successfully populated and assigned to analysts in live database.' });
+    const { seed135Complaints } = await import('./scripts/seed135Complaints.js');
+    await seed135Complaints();
+    res.json({ success: true, message: '10 Analysts & 135 corporate complaints successfully populated and assigned in database.' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
