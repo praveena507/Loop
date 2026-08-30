@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { dbRun, dbGet, initDatabase } from './initDb.js';
+import { seed50Complaints } from '../scripts/seed50Complaints.js';
 
 export async function seedDatabase() {
   await initDatabase();
@@ -28,109 +29,19 @@ export async function seedDatabase() {
   }
 
   // Backfill plainPassword for existing default staff accounts if null
-  await dbRun("UPDATE staff_users SET plainPassword = 'Admin@12345' WHERE email = 'admin@loop.com' AND plainPassword IS NULL");
-  await dbRun("UPDATE staff_users SET plainPassword = 'Analyst@12345' WHERE email = 'analyst@loop.com' AND plainPassword IS NULL");
+  await dbRun("UPDATE staff_users SET plainPassword = 'Admin@12345' WHERE email = 'admin@loop.com' AND (plainPassword IS NULL OR plainPassword = '')");
+  await dbRun("UPDATE staff_users SET plainPassword = 'Analyst@12345' WHERE email = 'analyst@loop.com' AND (plainPassword IS NULL OR plainPassword = '')");
 
-  // Create sample customer
-  await dbRun(
-    `INSERT OR IGNORE INTO customers (id, name, email, emailVerified, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    ['cust_01', 'Sarah Jenkins', 'sarah.j@example.com', 1, now, now]
-  );
+  // Check complaint count and automatically seed complete 50 complaints dataset with analyst assignments
+  try {
+    const complaintCount = await dbGet('SELECT COUNT(*) as count FROM complaints');
+    if (!complaintCount || complaintCount.count < 20) {
+      console.log(`Database has ${complaintCount?.count || 0} complaints. Seeding complete 50 enterprise complaints dataset...`);
+      await seed50Complaints();
+    }
+  } catch (err) {
+    console.error('Auto-seed 50 complaints notice:', err);
+  }
 
-  // Sample Complaint 1 (Payment Section - Critical Overcharge with Receipt Proof)
-  const c1Id = 'cmp_2026_001';
-  await dbRun(
-    `INSERT OR IGNORE INTO complaints (id, complaintNumber, customerId, name, email, place, category, reason, description, attachmentUrl, status, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      c1Id,
-      'LOOP-2026-849201',
-      'cust_01',
-      'Sarah Jenkins',
-      'sarah.j@example.com',
-      'New York Store #12',
-      'Payment',
-      'Double charged on checkout terminal',
-      'I was charged twice for transaction #9914 ($249.99 x 2). The cashier mentioned a terminal glitch. Attached receipt proof shows duplicate line items.',
-      'https://example.com/receipt.pdf',
-      'AI_ANALYZED',
-      now,
-      now
-    ]
-  );
-
-  await dbRun(
-    `INSERT OR IGNORE INTO ai_analysis (id, complaintId, sentiment, sentimentScore, category, theme, priority, priorityScore, summary, keywords, suggestedResponse, attachmentAnalyzed, attachmentSummary, proofMatch, rootCause, sectionName, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'ai_01',
-      c1Id,
-      'NEGATIVE',
-      0.92,
-      'Payment Glitch',
-      'Billing & Overcharge',
-      'CRITICAL',
-      0.95,
-      'Customer double-charged $249.99 on physical store payment terminal #9914.',
-      JSON.stringify(['double charge', 'overcharge', 'glitch', 'receipt proof', 'payment']),
-      'Dear Sarah, We sincerely apologize for the duplicate charge of $249.99. Our Finance and Payments department has verified receipt proof and initiated a direct refund of $249.99 back to your original payment card.',
-      1,
-      'Attached Document Analyzed: PDF receipt matches store terminal #9914 with duplicate charge timestamp 14:02:11 EST.',
-      'VERIFIED - Attached PDF receipt proof matches customer statement',
-      'POS Terminal Double-Post Bug',
-      'Payment Section',
-      now,
-      now
-    ]
-  );
-
-  // Sample Complaint 2 (Technical Section)
-  const c2Id = 'cmp_2026_002';
-  await dbRun(
-    `INSERT OR IGNORE INTO complaints (id, complaintNumber, customerId, name, email, place, category, reason, description, attachmentUrl, status, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      c2Id,
-      'LOOP-2026-849202',
-      'cust_01',
-      'Sarah Jenkins',
-      'sarah.j@example.com',
-      'Digital Downloads Portal',
-      'Technical',
-      'Broken password reset link returning 404',
-      'When clicking the reset link in the automated email, it displays a 404 page expired error message every time. Screenshot attached.',
-      'https://example.com/error_screenshot.png',
-      'IN_PROGRESS',
-      now,
-      now
-    ]
-  );
-
-  await dbRun(
-    `INSERT OR IGNORE INTO ai_analysis (id, complaintId, sentiment, sentimentScore, category, theme, priority, priorityScore, summary, keywords, suggestedResponse, attachmentAnalyzed, attachmentSummary, proofMatch, rootCause, sectionName, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'ai_02',
-      c2Id,
-      'NEUTRAL',
-      0.65,
-      'Technical Issue',
-      'Authentication & Login Issues',
-      'MEDIUM',
-      0.60,
-      'Customer experiencing broken password reset URL redirecting to 404 error page.',
-      JSON.stringify(['password reset', '404 error', 'screenshot proof', 'login']),
-      'Hello Sarah, Thank you for reporting this issue. Our engineering team analyzed the screenshot proof and corrected the reset link handler token.',
-      1,
-      'Attached Image Proof Verified: PNG screenshot shows HTTP 404 Error on route /auth/reset-password?token=expired.',
-      'VERIFIED - Screenshot Proof Confirms Broken Token Route',
-      'URL Routing Token Handler Bug',
-      'Technical Section',
-      now,
-      now
-    ]
-  );
-
-  console.log('Seed: Initial complaints, AI analytics, and document proof data seeded.');
+  console.log('Seed: Database verification and staff accounts confirmed ready.');
 }
