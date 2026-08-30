@@ -120,5 +120,6 @@ export const api = {
   deleteAdminUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
   assignComplaint: (id, analystId) => request(`/admin/complaints/${id}/assign`, { method: 'POST', body: JSON.stringify({ analystId }) }),
   getAuditLogs: () => request('/admin/audit-logs'),
-  getAdminSettings: () => request('/admin/settings')
+  getAdminSettings: () => request('/admin/settings'),
+  seedDemoDatabase: () => request('/seed-database', { method: 'POST' })
 };

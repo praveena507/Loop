@@ -17,7 +17,8 @@ import {
   Flame,
   Zap,
   RefreshCw,
-  Users
+  Users,
+  Database
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,6 +47,7 @@ export function StaffDashboardPage() {
   });
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
 
   const loadDashboardData = () => {
     setLoading(true);
@@ -82,6 +84,20 @@ export function StaffDashboardPage() {
       .finally(() => setLoading(false));
   };
 
+  const handleSeedDemoData = async () => {
+    setSeeding(true);
+    try {
+      const res = await api.seedDemoDatabase();
+      if (res.success) {
+        loadDashboardData();
+      }
+    } catch (e) {
+      console.error('Seed demo data error:', e);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -104,20 +120,31 @@ export function StaffDashboardPage() {
 
         <main className="p-6 space-y-6 flex-1">
           
-          <div className="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700/80 custom-shadow">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-800 p-4 rounded-2xl border border-slate-700/80 custom-shadow">
             <div className="flex items-center space-x-2 text-xs text-slate-400 font-bold">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Live Database Connection Active • {complaints.length} Records In Scope</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-2">
               {isAdmin && (
-                <Link
-                  to="/staff/admin/users"
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors inline-flex items-center space-x-1.5"
-                >
-                  <Users className="w-3.5 h-3.5 text-indigo-200" />
-                  <span>Manage Analysts</span>
-                </Link>
+                <>
+                  <button
+                    onClick={handleSeedDemoData}
+                    disabled={seeding}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                    title="Populate complete 50 enterprise complaints with analyst assignments"
+                  >
+                    <Database className={`w-3.5 h-3.5 text-emerald-200 ${seeding ? 'animate-spin' : ''}`} />
+                    <span>{seeding ? 'Populating...' : 'Seed 50 Live Cases'}</span>
+                  </button>
+                  <Link
+                    to="/staff/admin/users"
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors inline-flex items-center space-x-1.5"
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-200" />
+                    <span>Manage Analysts</span>
+                  </Link>
+                </>
               )}
               <button
                 onClick={loadDashboardData}

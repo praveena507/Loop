@@ -41,6 +41,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Live Database Reseed / Populate Endpoint
+app.all('/api/seed-database', async (req, res) => {
+  try {
+    const { seed50Complaints } = await import('./scripts/seed50Complaints.js');
+    await seed50Complaints();
+    res.json({ success: true, message: '50 complaints successfully populated and assigned to analysts in live database.' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
