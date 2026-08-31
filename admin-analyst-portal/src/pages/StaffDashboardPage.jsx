@@ -81,6 +81,14 @@ export function StaffDashboardPage() {
             resolved,
             resolutionRate
           });
+
+          // Auto-healing cold-start safeguard: if Admin opens dashboard and complaints are below 10, auto-restore 135 complaints
+          if (isAdmin && total < 10 && !seeding) {
+            console.log('Low complaint count detected (<10). Auto-restoring full 135 corporate dataset...');
+            api.seedDemoDatabase().then(res => {
+              if (res.success) loadDashboardData();
+            }).catch(() => {});
+          }
         }
         if (resAna.success) {
           setAnalytics(resAna.analytics || {});
@@ -98,7 +106,7 @@ export function StaffDashboardPage() {
     try {
       const res = await api.seedDemoDatabase();
       if (res.success) {
-        setToastMsg('50 corporate cases populated and assigned successfully.');
+        setToastMsg('135 corporate complaints and 11 analysts populated and assigned successfully.');
         setTimeout(() => setToastMsg(null), 4000);
         loadDashboardData();
       }

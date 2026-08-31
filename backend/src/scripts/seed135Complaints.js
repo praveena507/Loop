@@ -1,4 +1,4 @@
-import { dbRun, dbGet, dbAll } from '../db/initDb.js';
+import { dbRun, dbGet, dbAll, initDatabase } from '../db/initDb.js';
 import bcrypt from 'bcryptjs';
 
 export const STAFF_ANALYSTS = [
@@ -205,6 +205,7 @@ const CUSTOMER_NAMES = [
 
 export async function seed135Complaints() {
   console.log('🌱 Seeding 10 Staff Analysts & 135 Enterprise Complaints...');
+  await initDatabase();
   const now = new Date().toISOString();
 
   // 1. Seed 1 Admin & 10+ Staff Analysts

@@ -106,8 +106,22 @@ const CUSTOMERS = [
   { name: 'William Anderson', email: 'w.anderson@firm.com', place: 'Central Business Hub' }
 ];
 
+const STAFF_ANALYSTS = [
+  { name: 'Lead Analyst Alex Rivera', email: 'analyst@loop.com', role: 'ANALYST' },
+  { name: 'Sarah Jenkins', email: 'sarah.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Marcus Chen', email: 'marcus.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Priya Sharma', email: 'priya.analyst@loop.com', role: 'ANALYST' },
+  { name: 'David Miller', email: 'david.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Elena Rostova', email: 'elena.analyst@loop.com', role: 'ANALYST' },
+  { name: 'James Wilson', email: 'james.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Amina Diallo', email: 'amina.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Lucas Silva', email: 'lucas.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Rachel Green', email: 'rachel.analyst@loop.com', role: 'ANALYST' },
+  { name: 'Vikram Patel', email: 'vikram.analyst@loop.com', role: 'ANALYST' }
+];
+
 async function seedLiveComplaints() {
-  console.log('Connecting to Live Render Backend...');
+  console.log('Connecting to Live Render Backend at:', BACKEND_URL);
   const login = await fetch(BACKEND_URL + '/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -115,18 +129,56 @@ async function seedLiveComplaints() {
   }).then(r => r.json());
 
   if (!login.success) {
-    throw new Error('Admin login failed');
+    throw new Error('Admin login failed: ' + (login.error || 'Check credentials'));
   }
 
   const token = login.token;
   console.log('Admin authenticated.');
 
+  // Check if seed endpoint is live
+  try {
+    const directSeed = await fetch(BACKEND_URL + '/seed-database', { method: 'POST' }).then(r => r.json());
+    if (directSeed.success) {
+      console.log('⚡ Live Render server executed direct database seed successfully:', directSeed.message);
+      return;
+    }
+  } catch (e) {}
+
+  // Otherwise, ensure all 11 staff analysts exist
   const usersRes = await fetch(BACKEND_URL + '/admin/users', {
     headers: { 'Authorization': 'Bearer ' + token }
   }).then(r => r.json());
 
-  const analysts = (usersRes.users || []).filter(u => u.role === 'ANALYST');
-  console.log(`Found ${analysts.length} operational staff analysts on live backend.`);
+  const existingUsers = usersRes.users || [];
+  console.log(`Currently found ${existingUsers.length} users on live backend.`);
+
+  for (const analyst of STAFF_ANALYSTS) {
+    const exists = existingUsers.some(u => u.email.toLowerCase() === analyst.email.toLowerCase());
+    if (!exists) {
+      console.log(`Creating analyst: ${analyst.name} (${analyst.email})...`);
+      await fetch(BACKEND_URL + '/admin/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: analyst.name,
+          email: analyst.email,
+          role: 'ANALYST',
+          password: 'Analyst@12345'
+        })
+      });
+    }
+  }
+
+  // Refetch analysts
+  const updatedUsersRes = await fetch(BACKEND_URL + '/admin/users', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => r.json());
+
+  const liveAnalysts = (updatedUsersRes.users || []).filter(u => u.role === 'ANALYST');
+  console.log(`Verified ${liveAnalysts.length} active operational analysts on Render.`);
 
   // Create 135 complaints
   const TOTAL_TARGET = 135;
@@ -149,7 +201,7 @@ async function seedLiveComplaints() {
         category: topic.cat,
         reason: `${topic.reason} (Case #${i + 1})`,
         description: topic.desc,
-        attachmentUrl: ''
+        attachmentUrl: (i % 2 === 0) ? `https://loop.com/proofs/receipt_${i + 1}.pdf` : ''
       })
     }).then(r => r.json());
 
@@ -157,9 +209,9 @@ async function seedLiveComplaints() {
       const compId = submitRes.complaint.id;
       count++;
 
-      // Assign across analysts (leave first 20 unassigned in incoming queue)
-      if (i >= 20 && analysts.length > 0) {
-        const assignedAnalyst = analysts[i % analysts.length];
+      // Assign across analysts (first 25 unassigned in incoming queue, rest assigned)
+      if (i >= 25 && liveAnalysts.length > 0) {
+        const assignedAnalyst = liveAnalysts[i % liveAnalysts.length];
         await fetch(`${BACKEND_URL}/admin/complaints/${compId}/assign`, {
           method: 'POST',
           headers: {
@@ -176,7 +228,8 @@ async function seedLiveComplaints() {
     }
   }
 
-  console.log(`\n🎉 Successfully populated ${count} live complaints across ${analysts.length} staff analysts!`);
+  console.log(`\n🎉 Successfully populated ${count} live complaints across ${liveAnalysts.length} staff analysts!`);
 }
 
 seedLiveComplaints().catch(console.error);
+

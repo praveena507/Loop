@@ -1,27 +1,18 @@
-import bcrypt from 'bcryptjs';
-import { dbRun, dbGet, initDatabase } from '../backend/src/db/initDb.js';
+import { initDatabase } from '../backend/src/db/initDb.js';
+import { seed135Complaints } from '../backend/src/scripts/seed135Complaints.js';
 
 export async function seedDatabase() {
   await initDatabase();
-
-  const existingAdmin = await dbGet('SELECT * FROM staff_users WHERE email = ?', ['admin@loop.com']);
-  if (!existingAdmin) {
-    const adminPasswordHash = await bcrypt.hash('Admin@12345', 10);
-    const analystPasswordHash = await bcrypt.hash('Analyst@12345', 10);
-    const now = new Date().toISOString();
-
-    await dbRun(
-      `INSERT INTO staff_users (id, name, email, passwordHash, role, status, createdAt, updatedAt) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ['usr_admin_01', 'System Administrator', 'admin@loop.com', adminPasswordHash, 'ADMIN', 'ACTIVE', now, now]
-    );
-
-    await dbRun(
-      `INSERT INTO staff_users (id, name, email, passwordHash, role, status, createdAt, updatedAt) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ['usr_analyst_01', 'Lead Analyst', 'analyst@loop.com', analystPasswordHash, 'ANALYST', 'ACTIVE', now, now]
-    );
-
-    console.log('Seed: Default staff users created.');
-  }
+  await seed135Complaints();
+  console.log('Seed: Database verification, 11 staff accounts, and 135 complaints confirmed ready.');
 }
+
+if (process.argv[1] && process.argv[1].replace(/\\/g, '/').includes('seed.js')) {
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}
+
