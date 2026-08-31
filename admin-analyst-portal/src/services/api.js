@@ -121,5 +121,12 @@ export const api = {
   assignComplaint: (id, analystId) => request(`/admin/complaints/${id}/assign`, { method: 'POST', body: JSON.stringify({ analystId }) }),
   getAuditLogs: () => request('/admin/audit-logs'),
   getAdminSettings: () => request('/admin/settings'),
-  seedDemoDatabase: () => request('/seed-database', { method: 'POST' })
+  seedDemoDatabase: async () => {
+    try {
+      return await request('/admin/seed', { method: 'POST' });
+    } catch (e) {
+      return await request('/seed-database', { method: 'POST' });
+    }
+  }
 };
+
