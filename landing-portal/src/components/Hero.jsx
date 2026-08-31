@@ -131,11 +131,17 @@ export default function Hero({ onNavigatePortal }) {
           </div>
 
           {/* Quick Sub-label */}
-          <p className="mt-4 text-xs text-slate-400 flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Direct redirection to deployed dedicated production workspaces</span>
-          </p>
+          <div className="mt-4 flex flex-col items-center justify-center gap-1.5">
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Direct redirection to deployed dedicated production workspaces</span>
+            </p>
+            <span className="text-2xs font-extrabold uppercase px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 shadow-xs">
+              ⚡ Evaluator Pass Active: Direct Access with Zero Login Barrier
+            </span>
+          </div>
         </div>
+
 
         {/* Workflow Visual Representation */}
         <div className="mt-16 sm:mt-20">

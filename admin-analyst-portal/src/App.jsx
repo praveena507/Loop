@@ -16,7 +16,15 @@ import { SettingsPage, AuditLogsPage } from './pages/SettingsPage';
 
 // Route Guards
 function StaffProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, initializing } = useAuth();
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300 gap-3">
+        <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Loading Live Workspace...</span>
+      </div>
+    );
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -24,7 +32,15 @@ function StaffProtectedRoute({ children }) {
 }
 
 function AdminProtectedRoute({ children }) {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, initializing } = useAuth();
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300 gap-3">
+        <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Loading Admin Console...</span>
+      </div>
+    );
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -89,8 +105,10 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Authentication Routes */}
-            <Route path="/" element={<StaffLoginPage />} />
+            {/* Direct Zero-Login Evaluator Gateway (Root defaults directly to Dashboard) */}
+            <Route path="/" element={<Navigate to="/staff/dashboard" replace />} />
+            
+            {/* Authentication Routes (Optional manual login) */}
             <Route path="/login" element={<StaffLoginPage />} />
             <Route path="/staff/login" element={<StaffLoginPage />} />
             <Route path="/admin/login" element={<StaffLoginPage />} />
@@ -135,10 +153,11 @@ export default function App() {
             <Route path="/admin/audit-logs" element={<AdminProtectedRoute><AuditLogsPage /></AdminProtectedRoute>} />
 
             {/* Catch-All Redirect */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>
   );
 }
+

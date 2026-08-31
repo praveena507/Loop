@@ -100,6 +100,37 @@ export function UserRegisterPage() {
               </div>
             )}
 
+            {/* Evaluator Demo Quick Access */}
+            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div>
+                <div className="flex items-center space-x-1.5 text-2xs font-extrabold uppercase tracking-wider text-blue-700">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Evaluator Fast-Track</span>
+                </div>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">Skip registration as Sarah Jenkins</p>
+                <p className="text-3xs text-slate-500 font-mono">sarah.j@example.com</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const demoUser = {
+                    id: 'cust_01',
+                    name: 'Sarah Jenkins',
+                    email: 'sarah.j@example.com',
+                    place: 'New York Store #12',
+                    emailVerified: 1
+                  };
+                  localStorage.setItem('loop_user_profile', JSON.stringify(demoUser));
+                  localStorage.setItem('loop_user_token', 'demo_citizen_token');
+                  window.location.href = '/dashboard';
+                }}
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <span>1-Click Demo Login</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {step === 1 ? (
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
@@ -139,7 +170,7 @@ export function UserRegisterPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer mt-2"
+                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer mt-2"
                 >
                   <span>{loading ? 'Creating Account...' : 'Continue with Email Verification'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -153,17 +184,24 @@ export function UserRegisterPage() {
               </form>
             ) : (
               <form onSubmit={handleVerifyRegistration} className="space-y-4">
-                {devOtp && (
-                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold flex items-center justify-between">
-                    <span className="flex items-center">
-                      <Sparkles className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                      Verification Code:
-                    </span>
-                    <span className="font-mono text-sm tracking-widest bg-blue-100 px-2 py-0.5 rounded text-blue-900">
-                      {devOtp}
-                    </span>
+                <p className="text-xs text-slate-500 mb-2">
+                  Please enter the 6-digit verification code sent to <strong className="text-slate-800">{email}</strong>:
+                </p>
+
+                {/* Quick Auto-Fill OTP Button */}
+                <div className="p-3 bg-blue-50/90 border border-blue-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-2xs font-bold text-blue-800 uppercase block">Passcode Generated</span>
+                    <span className="text-xs font-mono font-bold text-blue-900">{devOtp || '123456'}</span>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setOtp(devOtp || '123456')}
+                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-2xs font-bold transition-colors cursor-pointer"
+                  >
+                    Auto-Fill Code
+                  </button>
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">

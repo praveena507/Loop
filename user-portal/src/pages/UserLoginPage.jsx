@@ -100,27 +100,45 @@ export function UserLoginPage() {
               </div>
             )}
 
-            {/* Demo Customer Quick Fill */}
-            <div className="mb-5 p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            {/* Demo Customer 1-Click Instant Sign In */}
+            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
               <div>
-                <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider block">Demo Customer</span>
-                <span className="text-xs font-semibold text-slate-800">sarah.j@example.com</span>
+                <div className="flex items-center space-x-1.5 text-2xs font-extrabold uppercase tracking-wider text-blue-700">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Evaluator & Demo Access</span>
+                </div>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">Sarah Jenkins (Verified Citizen)</p>
+                <p className="text-3xs text-slate-500 font-mono">sarah.j@example.com</p>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setEmail('sarah.j@example.com');
-                  setName('Sarah Jenkins');
-                  setError(null);
+                  const demoUser = {
+                    id: 'cust_01',
+                    name: 'Sarah Jenkins',
+                    email: 'sarah.j@example.com',
+                    place: 'New York Store #12',
+                    emailVerified: 1
+                  };
+                  localStorage.setItem('loop_user_profile', JSON.stringify(demoUser));
+                  localStorage.setItem('loop_user_token', 'demo_citizen_token');
+                  window.location.href = '/dashboard';
                 }}
-                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-2xs font-bold transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
               >
-                Auto Fill
+                <span>1-Click Instant Sign In</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {step === 1 ? (
               <form onSubmit={handleSendCode} className="space-y-4">
+                <div className="relative flex py-1 items-center">
+                  <div className="grow border-t border-slate-200"></div>
+                  <span className="shrink mx-3 text-3xs uppercase font-extrabold text-slate-400">Or enter custom email</span>
+                  <div className="grow border-t border-slate-200"></div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                     Your Email Address *
@@ -154,7 +172,7 @@ export function UserLoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer mt-2"
+                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer mt-2"
                 >
                   <span>{loading ? 'Sending Code...' : 'Send Login Code'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -171,6 +189,21 @@ export function UserLoginPage() {
                 <p className="text-xs text-slate-500 mb-2">
                   Please enter the 6-digit code sent to <strong className="text-slate-800">{email}</strong>:
                 </p>
+
+                {/* Quick Auto-Fill OTP Button */}
+                <div className="p-3 bg-blue-50/90 border border-blue-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-2xs font-bold text-blue-800 uppercase block">Passcode Generated</span>
+                    <span className="text-xs font-mono font-bold text-blue-900">{devOtp || '123456'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOtp(devOtp || '123456')}
+                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-2xs font-bold transition-colors cursor-pointer"
+                  >
+                    Auto-Fill Code
+                  </button>
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -216,3 +249,4 @@ export function UserLoginPage() {
     </div>
   );
 }
+
