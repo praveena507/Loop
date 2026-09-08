@@ -122,6 +122,22 @@ export function EmailVerifyPage() {
               </div>
             )}
 
+            {devOtp && (
+              <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Test Verification Code: <strong className="font-mono text-sm tracking-wider">{devOtp}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOtp(devOtp)}
+                  className="px-2.5 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Auto-Fill
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleVerify} className="mt-6 space-y-5">
               <div>
                 <input

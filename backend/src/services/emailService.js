@@ -27,9 +27,14 @@ async function sendEmailViaEmailJS(templateParams) {
       payload.accessToken = privateKey.trim();
     }
 
+    const origin = (process.env.USER_PORTAL_URL || 'https://user-portal-8vee-1.vercel.app').replace(/\/+$/, '');
     const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': origin,
+        'Referer': `${origin}/`
+      },
       body: JSON.stringify(payload)
     });
 
